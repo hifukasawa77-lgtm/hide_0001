@@ -80,7 +80,26 @@ python -m network_monitor check-ip 1.2.3.4
 python -m network_monitor check-ip 1.2.3.4 5.6.7.8  # 複数同時チェック
 ```
 
-### 継続監視モード
+### Webダッシュボード (ブラウザで使う)
+
+```bash
+# Webサーバーを起動してブラウザで開く
+sudo python -m network_monitor web
+
+# カスタムポートで起動
+sudo python -m network_monitor web --port 8080
+
+# ブラウザで http://localhost:8765 にアクセス
+```
+
+ダッシュボードの機能:
+- リアルタイムの接続統計 (WebSocket)
+- ARPスキャンによるデバイス検出
+- 外部接続の IP評判チェック
+- アラートのリアルタイム表示
+- IPアドレスの手動チェック
+
+### 継続監視モード (CLI)
 
 ```bash
 # 定期的にスキャン・監視してアラートを表示

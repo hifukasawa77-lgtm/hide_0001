@@ -367,6 +367,36 @@ def cmd_monitor(args, config: dict) -> None:
 
 
 # --------------------------------------------------------------------------- #
+# サブコマンド: web (ブラウザUI)                                                 #
+# --------------------------------------------------------------------------- #
+
+def cmd_web(args, config: dict) -> None:
+    """ブラウザで操作できるWebダッシュボードを起動する"""
+    try:
+        import uvicorn
+    except ImportError:
+        _print("[red]uvicornがインストールされていません。pip install uvicorn fastapi を実行してください。[/red]")
+        sys.exit(1)
+
+    from .web.app import create_app
+
+    host = args.host
+    port = args.port
+    app = create_app(config)
+
+    url = f"http://{host if host != '0.0.0.0' else 'localhost'}:{port}"
+    _print(
+        f"\n[bold green]Webダッシュボードを起動しています...[/bold green]\n"
+        f"ブラウザで [bold cyan]{url}[/bold cyan] を開いてください\n"
+        f"[dim]Ctrl+C で終了[/dim]"
+        if console else
+        f"\nブラウザで {url} を開いてください (Ctrl+C で終了)"
+    )
+
+    uvicorn.run(app, host=host, port=port, log_level="warning")
+
+
+# --------------------------------------------------------------------------- #
 # サブコマンド: check-ip                                                        #
 # --------------------------------------------------------------------------- #
 
@@ -426,6 +456,12 @@ def main() -> None:
     # monitor
     monitor_parser = subparsers.add_parser("monitor", help="継続的に監視する (Ctrl+C で終了)")
     monitor_parser.set_defaults(func=cmd_monitor)
+
+    # web
+    web_parser = subparsers.add_parser("web", help="ブラウザで使えるWebダッシュボードを起動する")
+    web_parser.add_argument("--host", default="127.0.0.1", help="ホスト (デフォルト: 127.0.0.1)")
+    web_parser.add_argument("--port", type=int, default=8765, help="ポート番号 (デフォルト: 8765)")
+    web_parser.set_defaults(func=cmd_web)
 
     # check-ip
     checkip_parser = subparsers.add_parser("check-ip", help="IPアドレスの評判をチェックする")

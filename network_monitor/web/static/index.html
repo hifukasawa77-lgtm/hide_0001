@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ホームネットワーク セキュリティモニター</title>
+  <style>
+    /* ===== リセット & 変数 ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface2: #21262d;
+      --border: #30363d;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --green: #3fb950;
+      --yellow: #d29922;
+      --red: #f85149;
+      --blue: #58a6ff;
+      --purple: #bc8cff;
+      --radius: 8px;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+      min-height: 100vh;
+    }
+
+    /* ===== ヘッダー ===== */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    header h1 { font-size: 16px; font-weight: 600; }
+    header .shield { font-size: 22px; }
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      display: inline-block;
+      margin-right: 6px;
+    }
+    .status-dot.connected { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .status-dot.error     { background: var(--red); }
+    #ws-status { font-size: 12px; color: var(--text-muted); }
+    header .spacer { flex: 1; }
+    .btn {
+      padding: 6px 14px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 13px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s;
+    }
+    .btn:hover { background: #2d333b; }
+    .btn.primary { background: #1f6feb; border-color: #1f6feb; }
+    .btn.primary:hover { background: #388bfd; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ===== メインレイアウト ===== */
+    main {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px;
+      display: grid;
+      gap: 20px;
+    }
+
+    /* ===== サマリーカード ===== */
+    .summary-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 14px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+    .stat-card .label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat-card .value { font-size: 28px; font-weight: 700; margin-top: 4px; }
+    .stat-card .value.green  { color: var(--green); }
+    .stat-card .value.yellow { color: var(--yellow); }
+    .stat-card .value.red    { color: var(--red); }
+    .stat-card .value.blue   { color: var(--blue); }
+
+    /* ===== パネル共通 ===== */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .panel-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600;
+      font-size: 13px;
+    }
+    .panel-header .badge {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 1px 8px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .panel-header .actions { margin-left: auto; display: flex; gap: 8px; }
+
+    /* ===== テーブル ===== */
+    .table-wrap { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th {
+      text-align: left;
+      padding: 8px 12px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    td {
+      padding: 9px 12px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .tag.safe     { background: rgba(63,185,80,0.15); color: var(--green); }
+    .tag.warn     { background: rgba(210,153,34,0.15); color: var(--yellow); }
+    .tag.danger   { background: rgba(248,81,73,0.15);  color: var(--red); }
+    .tag.unknown  { background: var(--surface2); color: var(--text-muted); }
+    .monospace { font-family: "SFMono-Regular", Consolas, monospace; }
+
+    /* ===== アラートリスト ===== */
+    .alert-list { max-height: 380px; overflow-y: auto; }
+    .alert-item {
+      display: flex;
+      gap: 12px;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      align-items: flex-start;
+    }
+    .alert-item:last-child { border-bottom: none; }
+    .alert-icon { font-size: 16px; margin-top: 1px; flex-shrink: 0; }
+    .alert-body { flex: 1; min-width: 0; }
+    .alert-title { font-weight: 600; font-size: 13px; }
+    .alert-desc  { color: var(--text-muted); font-size: 12px; margin-top: 2px; }
+    .alert-meta  { color: var(--text-muted); font-size: 11px; margin-top: 4px; }
+    .alert-item.critical { border-left: 3px solid var(--red); }
+    .alert-item.warning  { border-left: 3px solid var(--yellow); }
+    .alert-item.info     { border-left: 3px solid var(--blue); }
+    .empty-state {
+      text-align: center;
+      padding: 32px;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    /* ===== タブ ===== */
+    .tabs { display: flex; border-bottom: 1px solid var(--border); }
+    .tab {
+      padding: 10px 16px;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--text-muted);
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color 0.15s;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--text); border-bottom-color: var(--blue); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ===== IPチェックフォーム ===== */
+    .ip-check-form {
+      padding: 16px;
+      display: flex;
+      gap: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .ip-check-form input {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 7px 12px;
+      color: var(--text);
+      font-size: 13px;
+      font-family: var(--font);
+    }
+    .ip-check-form input:focus { outline: none; border-color: var(--blue); }
+    .ip-result { padding: 16px; }
+    .ip-result-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+    .ip-result-card .ip-addr { font-size: 20px; font-weight: 700; margin-bottom: 12px; font-family: monospace; }
+    .ip-result-card .fields { display: grid; gap: 8px; }
+    .ip-result-card .field { display: flex; gap: 8px; font-size: 13px; }
+    .ip-result-card .field .key { color: var(--text-muted); width: 100px; flex-shrink: 0; }
+
+    /* ===== スピナー ===== */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid var(--border);
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      vertical-align: middle;
+    }
+
+    /* ===== スキャンボタンのローディング ===== */
+    #scan-btn.loading .btn-text::before { content: ""; }
+
+    /* ===== レスポンシブ ===== */
+    @media (max-width: 700px) {
+      main { padding: 12px; }
+      .summary-row { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <span class="shield">🛡️</span>
+  <h1>ホームネットワーク セキュリティモニター</h1>
+  <span class="spacer"></span>
+  <span id="ws-status"><span class="status-dot" id="ws-dot"></span>接続中...</span>
+</header>
+
+<main>
+  <!-- サマリーカード -->
+  <div class="summary-row">
+    <div class="stat-card">
+      <div class="label">検出デバイス</div>
+      <div class="value blue" id="stat-devices">-</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">外部接続</div>
+      <div class="value" id="stat-external">-</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">確立済み接続</div>
+      <div class="value green" id="stat-established">-</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">疑わしい接続</div>
+      <div class="value" id="stat-suspicious">-</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">アラート</div>
+      <div class="value red" id="stat-alerts">0</div>
+    </div>
+  </div>
+
+  <!-- タブパネル -->
+  <div class="panel">
+    <div class="tabs">
+      <div class="tab active" data-tab="devices">デバイス</div>
+      <div class="tab" data-tab="connections">接続</div>
+      <div class="tab" data-tab="ports">ポート</div>
+      <div class="tab" data-tab="alerts">アラート</div>
+      <div class="tab" data-tab="checkip">IPチェック</div>
+    </div>
+
+    <!-- デバイスタブ -->
+    <div class="tab-panel active" id="tab-devices">
+      <div class="panel-header">
+        デバイス一覧
+        <span class="badge" id="devices-count">0台</span>
+        <div class="actions">
+          <button class="btn primary" id="scan-btn" onclick="doScan()">
+            <span id="scan-btn-icon">🔍</span>
+            <span id="scan-btn-text">スキャン</span>
+          </button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>IPアドレス</th>
+              <th>MACアドレス</th>
+              <th>ホスト名</th>
+              <th>状態</th>
+            </tr>
+          </thead>
+          <tbody id="devices-tbody">
+            <tr><td colspan="4" class="empty-state">スキャンボタンを押してください</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 接続タブ -->
+    <div class="tab-panel" id="tab-connections">
+      <div class="panel-header">
+        外部接続
+        <span class="badge" id="connections-count">0件</span>
+        <div class="actions">
+          <button class="btn" onclick="loadConnections()">🔄 更新</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>プロセス</th>
+              <th>リモートIP</th>
+              <th>ポート</th>
+              <th>国</th>
+              <th>評判</th>
+              <th>状態</th>
+            </tr>
+          </thead>
+          <tbody id="connections-tbody">
+            <tr><td colspan="6" class="empty-state">「更新」を押してください</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ポートタブ -->
+    <div class="tab-panel" id="tab-ports">
+      <div class="panel-header">
+        リスニングポート
+        <span class="badge" id="ports-count">0件</span>
+        <div class="actions">
+          <button class="btn" onclick="loadPorts()">🔄 更新</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ポート</th>
+              <th>IPアドレス</th>
+              <th>プロセス</th>
+              <th>PID</th>
+              <th>評価</th>
+            </tr>
+          </thead>
+          <tbody id="ports-tbody">
+            <tr><td colspan="5" class="empty-state">「更新」を押してください</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- アラートタブ -->
+    <div class="tab-panel" id="tab-alerts">
+      <div class="panel-header">
+        アラート
+        <span class="badge" id="alerts-count">0件</span>
+        <div class="actions">
+          <button class="btn" onclick="clearAlerts()">🗑️ クリア</button>
+        </div>
+      </div>
+      <div class="alert-list" id="alerts-list">
+        <div class="empty-state">アラートはありません ✅</div>
+      </div>
+    </div>
+
+    <!-- IPチェックタブ -->
+    <div class="tab-panel" id="tab-checkip">
+      <div class="panel-header">IPアドレス 評判チェック</div>
+      <div class="ip-check-form">
+        <input type="text" id="ip-input" placeholder="例: 1.2.3.4" onkeydown="if(event.key==='Enter')checkIp()">
+        <button class="btn primary" onclick="checkIp()">チェック</button>
+      </div>
+      <div class="ip-result" id="ip-result"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+  // ===== 状態 =====
+  const state = {
+    devices: [],
+    alerts: [],
+    wsConnected: false,
+  };
+
+  // ===== WebSocket =====
+  let ws = null;
+  let wsRetry = 0;
+
+  function connectWs() {
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    ws = new WebSocket(`${proto}://${location.host}/ws`);
+
+    ws.onopen = () => {
+      wsRetry = 0;
+      state.wsConnected = true;
+      setWsStatus(true);
+      // 接続後すぐに接続情報を取得
+      loadConnections();
+    };
+
+    ws.onmessage = (e) => {
+      const msg = JSON.parse(e.data);
+      handleWsEvent(msg);
+    };
+
+    ws.onclose = () => {
+      state.wsConnected = false;
+      setWsStatus(false);
+      // 再接続 (指数バックオフ)
+      const delay = Math.min(2000 * (2 ** wsRetry), 30000);
+      wsRetry++;
+      setTimeout(connectWs, delay);
+    };
+
+    ws.onerror = () => ws.close();
+  }
+
+  function handleWsEvent(msg) {
+    switch (msg.event) {
+      case 'init':
+        renderDevices(msg.data.devices || []);
+        (msg.data.alerts || []).forEach(a => addAlert(a, false));
+        renderAlerts();
+        updateAlertCount();
+        break;
+      case 'scan_started':
+        setScanLoading(true);
+        break;
+      case 'scan_complete':
+        setScanLoading(false);
+        renderDevices(msg.data.devices || []);
+        (msg.data.new_alerts || []).forEach(a => addAlert(a, true));
+        break;
+      case 'scan_error':
+        setScanLoading(false);
+        showToast('スキャンエラー: ' + msg.data.message, 'error');
+        break;
+      case 'connections_updated':
+        renderConnections(msg.data.connections || []);
+        break;
+      case 'alert':
+        addAlert(msg.data, true);
+        renderAlerts();
+        updateAlertCount();
+        break;
+      case 'stats_updated':
+        updateStats(msg.data);
+        break;
+      case 'alerts_cleared':
+        state.alerts = [];
+        renderAlerts();
+        updateAlertCount();
+        break;
+    }
+  }
+
+  function setWsStatus(connected) {
+    const dot = document.getElementById('ws-dot');
+    const text = document.getElementById('ws-status');
+    dot.className = 'status-dot ' + (connected ? 'connected' : 'error');
+    text.innerHTML = `<span class="status-dot ${connected ? 'connected' : 'error'}"></span>${connected ? 'リアルタイム監視中' : '切断 (再接続中...)'}`;
+  }
+
+  // keepalive ping
+  setInterval(() => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'ping' }));
+    }
+  }, 25000);
+
+  // ===== タブ切り替え =====
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+    });
+  });
+
+  // ===== スキャン =====
+  async function doScan() {
+    const btn = document.getElementById('scan-btn');
+    if (btn.disabled) return;
+    btn.disabled = true;
+    try {
+      const res = await fetch('/api/scan', { method: 'POST' });
+      if (!res.ok) {
+        const err = await res.json();
+        showToast(err.error || 'エラー', 'error');
+        btn.disabled = false;
+      }
+      // ローディング状態はWSイベントで管理
+    } catch(e) {
+      btn.disabled = false;
+    }
+  }
+
+  function setScanLoading(loading) {
+    const btn = document.getElementById('scan-btn');
+    const icon = document.getElementById('scan-btn-icon');
+    const text = document.getElementById('scan-btn-text');
+    btn.disabled = loading;
+    if (loading) {
+      icon.innerHTML = '<span class="spinner"></span>';
+      text.textContent = 'スキャン中...';
+    } else {
+      icon.textContent = '🔍';
+      text.textContent = 'スキャン';
+    }
+  }
+
+  // ===== デバイス描画 =====
+  function renderDevices(devices) {
+    state.devices = devices;
+    const tbody = document.getElementById('devices-tbody');
+    document.getElementById('devices-count').textContent = `${devices.length}台`;
+    document.getElementById('stat-devices').textContent = devices.length;
+
+    if (!devices.length) {
+      tbody.innerHTML = '<tr><td colspan="4" class="empty-state">デバイスが見つかりません</td></tr>';
+      return;
+    }
+    tbody.innerHTML = devices
+      .sort((a, b) => ipToNum(a.ip) - ipToNum(b.ip))
+      .map(d => `
+        <tr>
+          <td class="monospace">${esc(d.ip)}</td>
+          <td class="monospace" style="color:var(--text-muted)">${esc(d.mac)}</td>
+          <td>${esc(d.hostname) || '<span style="color:var(--text-muted)">-</span>'}</td>
+          <td><span class="tag unknown">未分類</span></td>
+        </tr>
+      `).join('');
+  }
+
+  // ===== 接続描画 =====
+  async function loadConnections() {
+    const tbody = document.getElementById('connections-tbody');
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><span class="spinner"></span> 取得中...</td></tr>';
+    try {
+      const res = await fetch('/api/connections');
+      const data = await res.json();
+      renderConnections(data.connections);
+    } catch(e) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty-state">取得に失敗しました</td></tr>';
+    }
+  }
+
+  function renderConnections(connections) {
+    const tbody = document.getElementById('connections-tbody');
+    document.getElementById('connections-count').textContent = `${connections.length}件`;
+
+    if (!connections.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty-state">外部接続はありません ✅</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = connections.map(c => {
+      const rep = c.reputation || {};
+      let repTag;
+      if (rep.is_malicious) {
+        repTag = '<span class="tag danger">危険</span>';
+      } else if (rep.is_suspicious || c.is_suspicious) {
+        repTag = '<span class="tag warn">要注意</span>';
+      } else {
+        repTag = '<span class="tag safe">正常</span>';
+      }
+
+      const statusColor = c.status === 'ESTABLISHED' ? 'var(--green)' : 'var(--text-muted)';
+      const tooltip = rep.detail ? `title="${esc(rep.detail)}"` : '';
+      return `
+        <tr ${c.reputation?.is_malicious ? 'style="background:rgba(248,81,73,0.06)"' : ''}>
+          <td>${esc(c.process) || '<span style="color:var(--text-muted)">-</span>'}</td>
+          <td class="monospace">${esc(c.remote_ip)}</td>
+          <td class="monospace">${c.remote_port}</td>
+          <td>${esc(rep.country) || '-'}</td>
+          <td ${tooltip}>${repTag}</td>
+          <td style="color:${statusColor};font-size:11px">${esc(c.status)}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  // ===== ポート描画 =====
+  async function loadPorts() {
+    const tbody = document.getElementById('ports-tbody');
+    tbody.innerHTML = '<tr><td colspan="5" class="empty-state"><span class="spinner"></span> 取得中...</td></tr>';
+    try {
+      const res = await fetch('/api/ports');
+      const data = await res.json();
+      const ports = data.ports || [];
+      document.getElementById('ports-count').textContent = `${ports.length}件`;
+
+      if (!ports.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">リスニングポートなし</td></tr>';
+        return;
+      }
+      tbody.innerHTML = ports.map(p => {
+        let statusTag;
+        if (p.is_suspicious) {
+          statusTag = `<span class="tag danger">要注意: ${esc(p.reason)}</span>`;
+        } else if (p.port < 1024) {
+          statusTag = '<span class="tag warn">システム</span>';
+        } else {
+          statusTag = '<span class="tag safe">正常</span>';
+        }
+        return `
+          <tr>
+            <td class="monospace" style="font-weight:600">${p.port}</td>
+            <td class="monospace" style="color:var(--text-muted)">${esc(p.ip)}</td>
+            <td>${esc(p.process) || '-'}</td>
+            <td style="color:var(--text-muted)">${p.pid || '-'}</td>
+            <td>${statusTag}</td>
+          </tr>
+        `;
+      }).join('');
+    } catch(e) {
+      tbody.innerHTML = '<tr><td colspan="5" class="empty-state">取得に失敗しました</td></tr>';
+    }
+  }
+
+  // ===== アラート =====
+  function addAlert(alert, prepend = true) {
+    if (prepend) {
+      state.alerts.unshift(alert);
+    } else {
+      state.alerts.push(alert);
+    }
+    if (state.alerts.length > 200) state.alerts = state.alerts.slice(0, 200);
+  }
+
+  function renderAlerts() {
+    const list = document.getElementById('alerts-list');
+    if (!state.alerts.length) {
+      list.innerHTML = '<div class="empty-state">アラートはありません ✅</div>';
+      return;
+    }
+    list.innerHTML = state.alerts.map(a => {
+      const icon = a.level === 'critical' ? '🚨' : a.level === 'warning' ? '⚠️' : 'ℹ️';
+      const ts = new Date(a.timestamp).toLocaleTimeString('ja-JP');
+      const src = a.source_ip ? ` [${esc(a.source_ip)}]` : '';
+      return `
+        <div class="alert-item ${a.level}">
+          <span class="alert-icon">${icon}</span>
+          <div class="alert-body">
+            <div class="alert-title">${esc(a.title)}</div>
+            <div class="alert-desc">${esc(a.description)}</div>
+            <div class="alert-meta">${ts}${src}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function updateAlertCount() {
+    const count = state.alerts.length;
+    document.getElementById('stat-alerts').textContent = count;
+    document.getElementById('stat-alerts').className = 'value ' + (count > 0 ? 'red' : 'green');
+    document.getElementById('alerts-count').textContent = `${count}件`;
+  }
+
+  async function clearAlerts() {
+    await fetch('/api/alerts', { method: 'DELETE' });
+  }
+
+  // ===== 統計更新 =====
+  function updateStats(data) {
+    if (data.external !== undefined) {
+      document.getElementById('stat-external').textContent = data.external;
+    }
+    if (data.established !== undefined) {
+      document.getElementById('stat-established').textContent = data.established;
+    }
+    if (data.suspicious !== undefined) {
+      const el = document.getElementById('stat-suspicious');
+      el.textContent = data.suspicious;
+      el.className = 'value ' + (data.suspicious > 0 ? 'yellow' : 'green');
+    }
+  }
+
+  // ===== IPチェック =====
+  async function checkIp() {
+    const ip = document.getElementById('ip-input').value.trim();
+    if (!ip) return;
+    const result = document.getElementById('ip-result');
+    result.innerHTML = '<span class="spinner"></span> チェック中...';
+    try {
+      const res = await fetch(`/api/check-ip/${encodeURIComponent(ip)}`);
+      const data = await res.json();
+      const isMalicious = data.is_malicious;
+      const isSuspicious = data.is_suspicious;
+      const statusColor = isMalicious ? 'var(--red)' : isSuspicious ? 'var(--yellow)' : 'var(--green)';
+      const statusText  = isMalicious ? '🚨 危険' : isSuspicious ? '⚠️ 要注意' : '✅ 正常';
+
+      result.innerHTML = `
+        <div class="ip-result-card">
+          <div class="ip-addr">${esc(data.ip)}</div>
+          <div class="fields">
+            <div class="field"><span class="key">評価</span><span style="color:${statusColor};font-weight:600">${statusText}</span></div>
+            <div class="field"><span class="key">国</span><span>${esc(data.country) || '不明'}</span></div>
+            ${data.isp ? `<div class="field"><span class="key">ISP</span><span>${esc(data.isp)}</span></div>` : ''}
+            <div class="field"><span class="key">詳細</span><span>${esc(data.detail) || '-'}</span></div>
+            <div class="field"><span class="key">情報源</span><span style="color:var(--text-muted)">${esc(data.source) || '-'}</span></div>
+            ${data.confidence_score ? `<div class="field"><span class="key">スコア</span><span>${data.confidence_score}/100</span></div>` : ''}
+          </div>
+        </div>
+      `;
+    } catch(e) {
+      result.innerHTML = '<div style="color:var(--red)">取得に失敗しました</div>';
+    }
+  }
+
+  // ===== ユーティリティ =====
+  function esc(s) {
+    if (!s) return '';
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function ipToNum(ip) {
+    return ip.split('.').reduce((a, b) => a * 256 + parseInt(b), 0);
+  }
+
+  function showToast(msg, type = 'info') {
+    // シンプルなトースト通知
+    const el = Object.assign(document.createElement('div'), {
+      textContent: msg,
+      style: `
+        position:fixed; bottom:20px; right:20px; z-index:9999;
+        background:${type === 'error' ? 'var(--red)' : 'var(--surface2)'};
+        color:var(--text); padding:10px 16px; border-radius:var(--radius);
+        border:1px solid var(--border); font-size:13px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        animation: fadein 0.2s;
+      `
+    });
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 4000);
+  }
+
+  // ===== 起動 =====
+  connectWs();
+</script>
+</body>
+</html>

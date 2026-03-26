@@ -1,0 +1,34 @@
+# Home Network Security Monitor - 設定ファイル
+# このファイルを config.yaml にコピーして使用してください
+
+# 監視対象ネットワーク (空の場合は自動検出)
+network: ""  # 例: "192.168.1.0/24"
+
+# スキャン間隔 (秒)
+scan_interval: 60
+
+# 接続監視の間隔 (秒)
+monitor_interval: 5
+
+# 既知の安全なデバイスのMACアドレスリスト (ホワイトリスト)
+# known_devices:
+#   - mac: "aa:bb:cc:dd:ee:ff"
+#     name: "自分のPC"
+#   - mac: "11:22:33:44:55:66"
+#     name: "スマートフォン"
+
+# AbuseIPDB APIキー (オプション: より精度の高いIP評価のため)
+# https://www.abuseipdb.com/ で無料取得可能
+abuseipdb_api_key: ""
+
+# アラートの閾値
+thresholds:
+  # ポートスキャン検知: X秒間にY個以上のポートへの接続試行
+  port_scan_ports: 10       # ユニークポート数
+  port_scan_window: 10      # 検査ウィンドウ (秒)
+  # 接続数の上限 (1つのIPから)
+  max_connections_per_ip: 20
+
+# ログ設定
+log_file: "network_monitor.log"
+log_level: "INFO"  # DEBUG, INFO, WARNING, ERROR

@@ -2,352 +2,669 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>ゼルダ風ゲーム</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>hide | Portfolio</title>
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: monospace; }
-canvas { border: 2px solid #555; image-rendering: pixelated; }
-#info { color: #aaa; font-size: 12px; margin-top: 8px; }
+  :root {
+    --primary: #00f0ff;
+    --secondary: #ff00aa;
+    --accent: #7700ff;
+    --bg: #050510;
+    --card-bg: rgba(255,255,255,0.04);
+  }
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: #e0e0ff;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    overflow-x: hidden;
+  }
+
+  /* ─── CANVAS BACKGROUND ─────────────────────── */
+  #bg-canvas {
+    position: fixed; top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0; pointer-events: none;
+  }
+
+  /* ─── NAV ────────────────────────────────────── */
+  nav {
+    position: fixed; top: 0; width: 100%; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 48px;
+    background: rgba(5,5,16,0.6);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(0,240,255,0.1);
+  }
+  .nav-logo {
+    font-size: 1.4rem; font-weight: 800; letter-spacing: 2px;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  nav ul { list-style: none; display: flex; gap: 36px; }
+  nav a {
+    color: #aab; text-decoration: none; font-size: 0.9rem; letter-spacing: 1px;
+    transition: color .3s; position: relative; text-transform: uppercase;
+  }
+  nav a::after {
+    content: ''; position: absolute; bottom: -4px; left: 0; width: 0; height: 1px;
+    background: var(--primary); transition: width .3s;
+  }
+  nav a:hover { color: var(--primary); }
+  nav a:hover::after { width: 100%; }
+
+  /* ─── SECTIONS ───────────────────────────────── */
+  section { position: relative; z-index: 1; }
+
+  /* ─── HERO ───────────────────────────────────── */
+  #hero {
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    text-align: center; padding: 100px 24px 60px;
+  }
+  .hero-inner { max-width: 780px; }
+  .hero-eyebrow {
+    font-size: 0.85rem; letter-spacing: 4px; text-transform: uppercase;
+    color: var(--primary); margin-bottom: 20px; opacity: 0;
+    animation: fadeUp .8s .2s forwards;
+  }
+  .hero-title {
+    font-size: clamp(3rem, 10vw, 7rem);
+    font-weight: 900; line-height: 1;
+    margin-bottom: 24px;
+    opacity: 0; animation: fadeUp .8s .4s forwards;
+  }
+  .hero-title .name {
+    display: block;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 50%, var(--accent) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-size: 200% 200%; animation: gradShift 4s ease infinite;
+  }
+  .hero-sub {
+    font-size: clamp(1rem, 2.5vw, 1.3rem); color: #88aacc; margin-bottom: 48px;
+    opacity: 0; animation: fadeUp .8s .6s forwards;
+  }
+  .hero-btns {
+    display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
+    opacity: 0; animation: fadeUp .8s .8s forwards;
+  }
+  .btn {
+    padding: 14px 36px; border-radius: 50px; font-size: 0.95rem;
+    font-weight: 700; text-decoration: none; letter-spacing: 1px; cursor: pointer;
+    transition: transform .2s, box-shadow .2s;
+  }
+  .btn:hover { transform: translateY(-3px); }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    color: #fff; box-shadow: 0 0 30px rgba(0,240,255,0.4);
+  }
+  .btn-primary:hover { box-shadow: 0 0 50px rgba(0,240,255,0.6); }
+  .btn-outline {
+    border: 1px solid rgba(0,240,255,0.4); color: var(--primary);
+    background: transparent;
+  }
+  .btn-outline:hover { border-color: var(--primary); background: rgba(0,240,255,0.05); }
+
+  /* ─── SCROLL INDICATOR ───────────────────────── */
+  .scroll-indicator {
+    position: absolute; bottom: 36px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    opacity: 0; animation: fadeIn 1s 1.5s forwards;
+  }
+  .scroll-indicator span { font-size: 0.7rem; letter-spacing: 3px; color: #556; }
+  .scroll-line {
+    width: 1px; height: 48px;
+    background: linear-gradient(to bottom, var(--primary), transparent);
+    animation: scrollPulse 2s ease-in-out infinite;
+  }
+
+  /* ─── ABOUT ──────────────────────────────────── */
+  #about {
+    padding: 120px 24px;
+    display: flex; justify-content: center;
+  }
+  .about-grid {
+    max-width: 1000px; width: 100%;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center;
+  }
+  @media (max-width: 700px) { .about-grid { grid-template-columns: 1fr; } }
+  .about-visual {
+    display: flex; align-items: center; justify-content: center;
+  }
+  .avatar-ring {
+    width: 240px; height: 240px; border-radius: 50%;
+    border: 2px solid transparent;
+    background: linear-gradient(var(--bg), var(--bg)) padding-box,
+                linear-gradient(135deg, var(--primary), var(--secondary)) border-box;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    animation: rotateBorder 8s linear infinite;
+  }
+  .avatar-inner {
+    width: 200px; height: 200px; border-radius: 50%;
+    background: linear-gradient(135deg, #0a0a2a, #101030);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 5rem;
+  }
+  .section-label {
+    font-size: 0.8rem; letter-spacing: 4px; text-transform: uppercase;
+    color: var(--primary); margin-bottom: 12px;
+  }
+  .section-title {
+    font-size: clamp(1.8rem, 4vw, 2.8rem); font-weight: 800;
+    margin-bottom: 20px; line-height: 1.2;
+  }
+  .about-text { color: #88aacc; line-height: 1.8; font-size: 1rem; margin-bottom: 16px; }
+  .tag-list { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+  .tag {
+    padding: 6px 16px; border-radius: 50px; font-size: 0.8rem; font-weight: 600;
+    border: 1px solid rgba(0,240,255,0.2); color: var(--primary);
+    background: rgba(0,240,255,0.05);
+  }
+
+  /* ─── SKILLS ─────────────────────────────────── */
+  #skills { padding: 120px 24px; }
+  .section-header { text-align: center; margin-bottom: 64px; }
+  .skills-grid {
+    max-width: 900px; margin: 0 auto;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px;
+  }
+  .skill-card {
+    background: var(--card-bg);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 20px; padding: 28px 24px;
+    backdrop-filter: blur(10px);
+    transition: transform .3s, border-color .3s, box-shadow .3s;
+  }
+  .skill-card:hover {
+    transform: translateY(-6px);
+    border-color: rgba(0,240,255,0.3);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 30px rgba(0,240,255,0.08);
+  }
+  .skill-icon { font-size: 2.2rem; margin-bottom: 16px; }
+  .skill-name { font-weight: 700; margin-bottom: 12px; font-size: 1.05rem; }
+  .skill-bar-bg {
+    height: 4px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden;
+  }
+  .skill-bar {
+    height: 100%; border-radius: 4px;
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+    width: 0; transition: width 1.2s ease;
+  }
+  .skill-card:hover .skill-bar { /* triggered by JS intersection */ }
+
+  /* ─── PROJECTS ───────────────────────────────── */
+  #projects { padding: 120px 24px; }
+  .projects-grid {
+    max-width: 1100px; margin: 0 auto;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 28px;
+  }
+  .project-card {
+    background: var(--card-bg);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 24px; overflow: hidden;
+    transition: transform .3s, box-shadow .3s, border-color .3s;
+    cursor: pointer; text-decoration: none; color: inherit;
+    display: block;
+  }
+  .project-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 30px 80px rgba(0,0,0,0.5), 0 0 40px rgba(0,240,255,0.1);
+    border-color: rgba(0,240,255,0.3);
+  }
+  .project-thumb {
+    height: 200px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 5rem; position: relative; overflow: hidden;
+  }
+  .project-thumb::before {
+    content: ''; position: absolute; inset: 0;
+    background: inherit; filter: blur(30px) opacity(0.4);
+  }
+  .project-thumb-zelda {
+    background: linear-gradient(135deg, #1a3a1a, #0d2a0d);
+  }
+  .project-thumb-2 {
+    background: linear-gradient(135deg, #1a1a3a, #0d0d2a);
+  }
+  .project-thumb-3 {
+    background: linear-gradient(135deg, #3a1a1a, #2a0d0d);
+  }
+  .project-body { padding: 24px; }
+  .project-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .project-tag {
+    font-size: 0.7rem; padding: 3px 10px; border-radius: 50px;
+    background: rgba(0,240,255,0.1); color: var(--primary); letter-spacing: 1px;
+  }
+  .project-name { font-size: 1.2rem; font-weight: 700; margin-bottom: 10px; }
+  .project-desc { color: #88aacc; font-size: 0.9rem; line-height: 1.6; margin-bottom: 20px; }
+  .project-link {
+    font-size: 0.85rem; color: var(--primary); font-weight: 600;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .project-link::after { content: '→'; transition: transform .2s; }
+  .project-card:hover .project-link::after { transform: translateX(4px); }
+
+  /* ─── CONTACT ────────────────────────────────── */
+  #contact {
+    padding: 120px 24px;
+    display: flex; justify-content: center;
+  }
+  .contact-inner {
+    max-width: 600px; width: 100%; text-align: center;
+  }
+  .contact-glow {
+    width: 300px; height: 300px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,240,255,0.08) 0%, transparent 70%);
+    margin: 0 auto 48px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 6rem;
+    animation: pulse 3s ease-in-out infinite;
+  }
+  .contact-desc { color: #88aacc; line-height: 1.8; margin-bottom: 40px; font-size: 1.05rem; }
+  .contact-links { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+  .contact-link {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 28px; border-radius: 50px;
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #ccd; text-decoration: none; font-size: 0.9rem;
+    transition: all .3s; background: var(--card-bg);
+  }
+  .contact-link:hover {
+    border-color: var(--primary); color: var(--primary);
+    box-shadow: 0 0 30px rgba(0,240,255,0.2);
+    transform: translateY(-2px);
+  }
+
+  /* ─── FOOTER ─────────────────────────────────── */
+  footer {
+    position: relative; z-index: 1;
+    text-align: center; padding: 40px 24px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    color: #445; font-size: 0.85rem;
+  }
+
+  /* ─── REVEAL ANIMATIONS ──────────────────────── */
+  .reveal {
+    opacity: 0; transform: translateY(40px);
+    transition: opacity .8s ease, transform .8s ease;
+  }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  /* ─── KEYFRAMES ──────────────────────────────── */
+  @keyframes fadeUp {
+    to { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; transform: translateY(30px); }
+  }
+  @keyframes fadeIn { to { opacity: 1; } from { opacity: 0; } }
+  @keyframes gradShift {
+    0%,100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+  @keyframes rotateBorder {
+    to { filter: hue-rotate(360deg); }
+  }
+  @keyframes scrollPulse {
+    0%,100% { opacity: .3; transform: scaleY(1); }
+    50% { opacity: 1; transform: scaleY(1.2); }
+  }
+  @keyframes pulse {
+    0%,100% { box-shadow: 0 0 40px rgba(0,240,255,0.1); }
+    50% { box-shadow: 0 0 80px rgba(0,240,255,0.25); }
+  }
+
+  /* ─── GLITCH EFFECT ──────────────────────────── */
+  .glitch {
+    position: relative;
+  }
+  .glitch::before, .glitch::after {
+    content: attr(data-text);
+    position: absolute; top: 0; left: 0; width: 100%;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 50%, var(--accent) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .glitch::before {
+    animation: glitch1 3s infinite;
+    clip-path: polygon(0 0, 100% 0, 100% 35%, 0 35%);
+  }
+  .glitch::after {
+    animation: glitch2 3s infinite;
+    clip-path: polygon(0 65%, 100% 65%, 100% 100%, 0 100%);
+  }
+  @keyframes glitch1 {
+    0%,90%,100% { transform: none; opacity: 0; }
+    92% { transform: translate(-3px,0); opacity: .7; }
+    94% { transform: translate(3px,0); opacity: .7; }
+    96% { transform: none; opacity: 0; }
+  }
+  @keyframes glitch2 {
+    0%,90%,100% { transform: none; opacity: 0; }
+    93% { transform: translate(3px,0); opacity: .7; }
+    95% { transform: translate(-3px,0); opacity: .7; }
+    97% { transform: none; opacity: 0; }
+  }
+
+  /* ─── CURSOR GLOW ─────────────────────────────── */
+  #cursor-glow {
+    position: fixed; pointer-events: none; z-index: 9999;
+    width: 300px; height: 300px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,240,255,0.06) 0%, transparent 70%);
+    transform: translate(-50%, -50%);
+    transition: opacity .3s;
+  }
 </style>
 </head>
 <body>
-<canvas id="c" width="512" height="480"></canvas>
-<div id="info">矢印キー/WASD: 移動 | Z/Space: 剣攻撃 | Enter: 決定</div>
+
+<div id="cursor-glow"></div>
+<canvas id="bg-canvas"></canvas>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">hide</div>
+  <ul>
+    <li><a href="#about">About</a></li>
+    <li><a href="#skills">Skills</a></li>
+    <li><a href="#projects">Works</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-inner">
+    <p class="hero-eyebrow">Welcome to my world</p>
+    <h1 class="hero-title">
+      <span class="name glitch" data-text="hide">hide</span>
+    </h1>
+    <p class="hero-sub">Developer &amp; Creator &mdash; コードで世界を作る</p>
+    <div class="hero-btns">
+      <a href="#projects" class="btn btn-primary">作品を見る</a>
+      <a href="#contact" class="btn btn-outline">連絡する</a>
+    </div>
+  </div>
+  <div class="scroll-indicator">
+    <span>SCROLL</span>
+    <div class="scroll-line"></div>
+  </div>
+</section>
+
+<!-- ABOUT -->
+<section id="about">
+  <div class="about-grid">
+    <div class="about-visual reveal">
+      <div class="avatar-ring">
+        <div class="avatar-inner">⚔️</div>
+      </div>
+    </div>
+    <div class="reveal">
+      <p class="section-label">About Me</p>
+      <h2 class="section-title">コードと<br>クリエイティブの<br>交差点に立つ</h2>
+      <p class="about-text">
+        ゲーム・Web・インタラクティブなコンテンツを作ることが好きなデベロッパー。
+        アイデアをコードで形にし、人々が「見入ってしまう」体験を作ることに情熱を持っています。
+      </p>
+      <p class="about-text">
+        ゼロからコツコツ作ることが好きで、技術を組み合わせて新しいものを生み出すことに挑戦し続けています。
+      </p>
+      <div class="tag-list">
+        <span class="tag">JavaScript</span>
+        <span class="tag">Game Dev</span>
+        <span class="tag">Web Design</span>
+        <span class="tag">Creative Coding</span>
+        <span class="tag">Canvas API</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SKILLS -->
+<section id="skills">
+  <div class="section-header reveal">
+    <p class="section-label">Skills</p>
+    <h2 class="section-title">できること</h2>
+  </div>
+  <div class="skills-grid">
+    <div class="skill-card reveal">
+      <div class="skill-icon">🎮</div>
+      <div class="skill-name">Game Development</div>
+      <div class="skill-bar-bg"><div class="skill-bar" data-width="85"></div></div>
+    </div>
+    <div class="skill-card reveal">
+      <div class="skill-icon">🌐</div>
+      <div class="skill-name">Web Frontend</div>
+      <div class="skill-bar-bg"><div class="skill-bar" data-width="90"></div></div>
+    </div>
+    <div class="skill-card reveal">
+      <div class="skill-icon">🎨</div>
+      <div class="skill-name">UI / Visual Design</div>
+      <div class="skill-bar-bg"><div class="skill-bar" data-width="75"></div></div>
+    </div>
+    <div class="skill-card reveal">
+      <div class="skill-icon">⚡</div>
+      <div class="skill-name">JavaScript / Canvas</div>
+      <div class="skill-bar-bg"><div class="skill-bar" data-width="88"></div></div>
+    </div>
+    <div class="skill-card reveal">
+      <div class="skill-icon">🔧</div>
+      <div class="skill-name">Creative Coding</div>
+      <div class="skill-bar-bg"><div class="skill-bar" data-width="80"></div></div>
+    </div>
+    <div class="skill-card reveal">
+      <div class="skill-icon">🚀</div>
+      <div class="skill-name">Problem Solving</div>
+      <div class="skill-bar-bg"><div class="skill-bar" data-width="92"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- PROJECTS -->
+<section id="projects">
+  <div class="section-header reveal">
+    <p class="section-label">Works</p>
+    <h2 class="section-title">作品</h2>
+  </div>
+  <div class="projects-grid">
+    <a href="game.html" class="project-card reveal">
+      <div class="project-thumb project-thumb-zelda">⚔️</div>
+      <div class="project-body">
+        <div class="project-tags">
+          <span class="project-tag">GAME</span>
+          <span class="project-tag">CANVAS</span>
+          <span class="project-tag">JavaScript</span>
+        </div>
+        <h3 class="project-name">ZELDA QUEST — 勇者の試練</h3>
+        <p class="project-desc">
+          ゼルダ伝説にインスパイアされたトップビューアクションRPG。
+          3つのエリアを冒険し、鍵を集め、ボスを撃破せよ！
+          Canvas APIのみで実装したピクセルアート世界。
+        </p>
+        <span class="project-link">プレイする</span>
+      </div>
+    </a>
+    <div class="project-card reveal" style="cursor:default;">
+      <div class="project-thumb project-thumb-2">🌌</div>
+      <div class="project-body">
+        <div class="project-tags">
+          <span class="project-tag">WEB</span>
+          <span class="project-tag">アニメーション</span>
+        </div>
+        <h3 class="project-name">Coming Soon...</h3>
+        <p class="project-desc">
+          次のプロジェクトが進行中。乞うご期待。
+        </p>
+        <span class="project-link" style="opacity:.4">準備中</span>
+      </div>
+    </div>
+    <div class="project-card reveal" style="cursor:default;">
+      <div class="project-thumb project-thumb-3">🔮</div>
+      <div class="project-body">
+        <div class="project-tags">
+          <span class="project-tag">CREATIVE</span>
+          <span class="project-tag">EXPERIMENT</span>
+        </div>
+        <h3 class="project-name">Creative Lab</h3>
+        <p class="project-desc">
+          実験的な試みやプロトタイプを公開予定。
+          技術の限界に挑むアイデアを形にしていく場所。
+        </p>
+        <span class="project-link" style="opacity:.4">近日公開</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact">
+  <div class="contact-inner reveal">
+    <p class="section-label">Contact</p>
+    <h2 class="section-title" style="margin-bottom:24px;">一緒に何か<br>作りましょう</h2>
+    <div class="contact-glow">✉️</div>
+    <p class="contact-desc">
+      プロジェクトへのお誘い、コラボレーションのご相談、<br>
+      または単純に話しかけたい場合でも、いつでもご連絡ください。
+    </p>
+    <div class="contact-links">
+      <a href="https://github.com/hifukasawa77-lgtm" class="contact-link" target="_blank">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+        </svg>
+        GitHub
+      </a>
+      <a href="#" class="contact-link">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+        </svg>
+        Email
+      </a>
+      <a href="#" class="contact-link">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
+        </svg>
+        Twitter
+      </a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>&copy; 2025 hide &mdash; Built with passion and code</p>
+</footer>
+
 <script>
-const canvas = document.getElementById('c');
+// ─── PARTICLE BACKGROUND ──────────────────────────────────────────────────────
+const canvas = document.getElementById('bg-canvas');
 const ctx = canvas.getContext('2d');
-const TW = 32, TH = 32;
-const COLS = 16, ROWS = 15;
-const T = { FLOOR:0, WALL:1, DOOR_LOCKED:2, DOOR_OPEN:3, CHEST:4, KEY:5, STAIRS:6, WATER:7, GRASS:8 };
-const COLORS = {
-  [T.FLOOR]: '#c8a96e',
-  [T.WALL]:  '#4a3728',
-  [T.DOOR_LOCKED]: '#8b4513',
-  [T.DOOR_OPEN]:   '#c8a96e',
-  [T.CHEST]: '#d4a017',
-  [T.KEY]:   '#ffd700',
-  [T.STAIRS]:'#90ee90',
-  [T.WATER]: '#4169e1',
-  [T.GRASS]: '#228b22',
-};
-const ROOMS = [
-  [
-    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-    [1,0,0,1,1,0,0,0,0,0,1,1,0,0,0,1],
-    [1,0,0,1,0,0,0,0,0,0,0,1,0,0,0,1],
-    [1,0,0,0,0,0,0,5,0,0,0,0,0,0,0,1],
-    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-    [1,0,0,1,0,0,0,0,0,0,0,1,0,0,0,3],
-    [1,0,0,1,1,0,0,0,0,0,1,1,0,0,0,1],
-    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-  ],
-  [
-    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-    [1,0,0,0,7,7,7,0,0,7,7,7,0,0,0,1],
-    [1,0,0,7,7,7,7,7,7,7,7,7,7,0,0,1],
-    [1,0,0,7,7,7,7,7,7,7,7,7,7,0,0,1],
-    [1,0,0,0,7,7,7,0,0,7,7,7,0,0,0,1],
-    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-    [3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2],
-    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-    [1,0,0,0,7,7,7,0,0,7,7,7,0,0,0,1],
-    [1,0,0,7,7,7,7,7,7,7,7,7,7,0,0,1],
-    [1,0,0,7,7,7,7,4,7,7,7,7,7,0,0,1],
-    [1,0,0,0,7,7,7,0,0,7,7,7,0,0,0,1],
-    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-  ],
-  [
-    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-    [1,0,0,8,8,8,8,8,8,8,8,8,8,0,0,1],
-    [1,0,0,8,8,8,8,8,8,8,8,8,8,0,0,1],
-    [1,0,0,8,8,8,8,8,8,8,8,8,8,0,0,1],
-    [1,0,0,8,8,8,8,8,8,8,8,8,8,0,0,1],
-    [1,0,0,8,8,8,8,8,8,8,8,8,8,0,0,2],
-    [1,0,0,8,8,8,8,8,8,8,8,8,8,0,0,1],
-    [1,0,0,8,8,8,8,8,8,8,8,8,8,0,0,1],
-    [1,0,0,8,8,8,8,8,8,8,8,8,8,0,0,1],
-    [1,0,0,8,8,8,8,8,8,8,8,8,8,0,0,1],
-    [1,0,0,0,0,0,0,6,0,0,0,0,0,0,0,1],
-    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-  ],
-];
-const ROOM_EXITS = [
-  { right: 1 },
-  { left: 0, right: 2 },
-  { left: 1 },
-];
-function createEnemy(type, x, y) {
-  const e = { x, y, vx:0, vy:0, dir:0, type, alive:true, timer:0, hitTimer:0, attackTimer:0 };
-  if (type === 'slime') { e.hp = 2; e.maxHp = 2; e.speed = 0.6; e.size = 20; e.color='#55dd55'; e.dmg=1; }
-  else if (type === 'bat') { e.hp = 1; e.maxHp = 1; e.speed = 1.5; e.size = 16; e.color='#aa66ff'; e.dmg=1; }
-  else if (type === 'boss') { e.hp = 8; e.maxHp = 8; e.speed = 1.2; e.size = 40; e.color='#cc2222'; e.dmg=2; }
-  return e;
+let W, H, particles = [], lines = [];
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
 }
-let state = 'title';
-let room = 0;
-let enemies = [];
-let items = [];
-let player;
-let keys = {};
-let frameCount = 0;
-function initRoom(r) {
-  room = r;
-  enemies = [];
-  const defs = [
-    [ {type:'slime',x:200,y:200}, {type:'slime',x:300,y:300}, {type:'bat',x:400,y:150} ],
-    [ {type:'slime',x:150,y:250}, {type:'bat',x:350,y:100}, {type:'bat',x:400,y:350} ],
-    [ {type:'boss',x:256,y:200} ],
-  ];
-  if (r < defs.length) defs[r].forEach(d => enemies.push(createEnemy(d.type, d.x, d.y)));
-  items = [];
-  const mapData = ROOMS[r];
-  for (let row = 0; row < ROWS; row++) {
-    for (let col = 0; col < COLS; col++) {
-      const t = mapData[row][col];
-      if (t === T.KEY) items.push({type:'key', x: col*TW+TW/2, y: row*TH+TH/2, collected:false, row, col});
-      if (t === T.CHEST) items.push({type:'chest', x: col*TW+TW/2, y: row*TH+TH/2, collected:false, row, col});
+resize();
+window.addEventListener('resize', resize);
+
+class Particle {
+  constructor() { this.reset(); }
+  reset() {
+    this.x = Math.random() * W;
+    this.y = Math.random() * H;
+    this.vx = (Math.random() - .5) * .4;
+    this.vy = (Math.random() - .5) * .4;
+    this.size = Math.random() * 1.5 + .5;
+    this.alpha = Math.random() * .6 + .1;
+    this.color = Math.random() < .5 ? '0,240,255' : '119,0,255';
+  }
+  update() {
+    this.x += this.vx; this.y += this.vy;
+    if (this.x < 0 || this.x > W || this.y < 0 || this.y > H) this.reset();
+  }
+  draw() {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${this.color},${this.alpha})`;
+    ctx.fill();
+  }
+}
+
+for (let i = 0; i < 120; i++) particles.push(new Particle());
+
+let mouseX = W / 2, mouseY = H / 2;
+document.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
+
+// cursor glow
+const cursorGlow = document.getElementById('cursor-glow');
+document.addEventListener('mousemove', e => {
+  cursorGlow.style.left = e.clientX + 'px';
+  cursorGlow.style.top = e.clientY + 'px';
+});
+
+function drawBg() {
+  ctx.clearRect(0, 0, W, H);
+
+  // connect nearby particles
+  for (let i = 0; i < particles.length; i++) {
+    for (let j = i + 1; j < particles.length; j++) {
+      const dx = particles[i].x - particles[j].x;
+      const dy = particles[i].y - particles[j].y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist < 100) {
+        ctx.beginPath();
+        ctx.moveTo(particles[i].x, particles[i].y);
+        ctx.lineTo(particles[j].x, particles[j].y);
+        ctx.strokeStyle = `rgba(0,240,255,${(1 - dist/100) * 0.12})`;
+        ctx.lineWidth = .5;
+        ctx.stroke();
+      }
     }
   }
+
+  particles.forEach(p => { p.update(); p.draw(); });
+
+  // subtle radial glow at mouse
+  const grad = ctx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 300);
+  grad.addColorStop(0, 'rgba(0,240,255,0.04)');
+  grad.addColorStop(1, 'transparent');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  requestAnimationFrame(drawBg);
 }
-function initPlayer() {
-  player = { x: 80, y: 7*TH + TH/2, dir: 0, hp: 6, maxHp: 6, keys: 0, speed: 3, size: 20, attacking: false, attackTimer: 0, hitTimer: 0, swordDmg: 1, score: 0 };
-}
-function getTile(r, px, py) {
-  const col = Math.floor(px / TW), row = Math.floor(py / TH);
-  if (row < 0 || row >= ROWS || col < 0 || col >= COLS) return T.WALL;
-  return ROOMS[r][row][col];
-}
-function isSolid(tile) { return tile === T.WALL || tile === T.WATER || tile === T.DOOR_LOCKED; }
-function isPassable(r, px, py, size) {
-  const half = size / 2;
-  return ![
-    [px-half+2, py-half+2],[px+half-2, py-half+2],
-    [px-half+2, py+half-2],[px+half-2, py+half-2]
-  ].some(([cx,cy]) => isSolid(getTile(r,cx,cy)));
-}
-function getSwordBox(p) {
-  const len=30,w=20;
-  if(p.dir===0) return{x:p.x+p.size/2,y:p.y-w/2,w:len,h:w};
-  if(p.dir===1) return{x:p.x-p.size/2-len,y:p.y-w/2,w:len,h:w};
-  if(p.dir===2) return{x:p.x-w/2,y:p.y+p.size/2,w:w,h:len};
-  return{x:p.x-w/2,y:p.y-p.size/2-len,w:w,h:len};
-}
-function circleRect(cx,cy,cr,rx,ry,rw,rh){
-  const nx=Math.max(rx,Math.min(cx,rx+rw)),ny=Math.max(ry,Math.min(cy,ry+rh));
-  return(cx-nx)**2+(cy-ny)**2<cr*cr;
-}
-function drawTile(t,x,y){
-  ctx.fillStyle=COLORS[t]||'#888'; ctx.fillRect(x,y,TW,TH);
-  if(t===T.WALL){ctx.fillStyle='#2a1f14';ctx.fillRect(x+1,y+1,TW-2,4);ctx.fillStyle='#6b4e37';ctx.fillRect(x+1,y+TH-5,TW-2,4);}
-  if(t===T.DOOR_LOCKED){ctx.fillStyle='#ffd700';ctx.fillRect(x+TW/2-3,y+2,6,TH-4);ctx.fillStyle='#b8860b';ctx.fillRect(x+TW/2-2,y+TH/2-3,4,6);}
-  if(t===T.KEY){ctx.fillStyle='#ffd700';ctx.beginPath();ctx.arc(x+TW/2,y+TH/2-4,7,0,Math.PI*2);ctx.fill();ctx.fillStyle='#b8860b';ctx.fillRect(x+TW/2-2,y+TH/2+3,4,8);ctx.fillRect(x+TW/2,y+TH/2+7,5,3);}
-  if(t===T.CHEST){ctx.fillStyle='#8b4513';ctx.fillRect(x+4,y+8,TW-8,TH-12);ctx.fillStyle='#d4a017';ctx.fillRect(x+4,y+8,TW-8,6);ctx.fillStyle='#ffd700';ctx.fillRect(x+TW/2-3,y+10,6,4);}
-  if(t===T.STAIRS){ctx.fillStyle='#006400';for(let i=0;i<4;i++)ctx.fillRect(x+4+i*4,y+TH-8-i*4,TW-8-i*8,4);}
-  if(t===T.WATER){ctx.fillStyle='rgba(255,255,255,0.2)';ctx.fillRect(x+2,y+8,TW-4,4);ctx.fillRect(x+4,y+18,TW-8,4);}
-  if(t===T.GRASS){ctx.fillStyle='#2d5a1b';ctx.fillRect(x+6,y+4,4,8);ctx.fillRect(x+16,y+6,4,8);ctx.fillRect(x+22,y+3,4,8);}
-}
-function drawMap(r){const m=ROOMS[r];for(let row=0;row<ROWS;row++)for(let col=0;col<COLS;col++)drawTile(m[row][col],col*TW,row*TH);}
-function drawPlayer(p){
-  if(p.hitTimer>0&&Math.floor(p.hitTimer/4)%2===0)return;
-  const half=p.size/2;
-  ctx.fillStyle='#22aa22';ctx.fillRect(p.x-half+2,p.y-half,p.size-4,p.size);
-  ctx.fillStyle='#f4c88e';ctx.fillRect(p.x-half+4,p.y-half-8,p.size-8,10);
-  ctx.fillStyle='#118811';ctx.fillRect(p.x-half+2,p.y-half-14,p.size-4,8);ctx.fillRect(p.x-half,p.y-half-10,p.size,4);
-  ctx.fillStyle='#000';
-  if(p.dir===0)ctx.fillRect(p.x+2,p.y-half-5,3,3);
-  else if(p.dir===1)ctx.fillRect(p.x-6,p.y-half-5,3,3);
-  else if(p.dir===2){ctx.fillRect(p.x-4,p.y-half-5,3,3);ctx.fillRect(p.x+2,p.y-half-5,3,3);}
-  if(p.attacking){
-    ctx.fillStyle='#c0c0c0';const sb=getSwordBox(p);ctx.fillRect(sb.x,sb.y,sb.w,sb.h);
-    ctx.fillStyle='rgba(255,255,255,0.6)';
-    if(p.dir===0||p.dir===1)ctx.fillRect(sb.x,sb.y,sb.w,3);else ctx.fillRect(sb.x,sb.y,3,sb.h);
-  } else {
-    ctx.fillStyle='#888';
-    if(p.dir===0)ctx.fillRect(p.x+half-2,p.y-2,4,8);
-    else if(p.dir===1)ctx.fillRect(p.x-half-2,p.y-2,4,8);
-  }
-}
-function drawEnemy(e){
-  if(!e.alive)return;
-  const flash=e.hitTimer>0&&Math.floor(e.hitTimer/3)%2===0;
-  const half=e.size/2;
-  ctx.fillStyle=flash?'#fff':e.color;
-  if(e.type==='slime'){
-    ctx.beginPath();ctx.ellipse(e.x,e.y+4,half,half*0.7,0,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#000';ctx.fillRect(e.x-6,e.y-2,4,4);ctx.fillRect(e.x+2,e.y-2,4,4);
-  }else if(e.type==='bat'){
-    ctx.beginPath();ctx.ellipse(e.x,e.y,half*0.7,half*0.5,0,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle=flash?'#fff':'#8844cc';
-    const wing=Math.sin(frameCount*0.2)*5;
-    ctx.fillRect(e.x-half-2,e.y-4+wing,half,8);ctx.fillRect(e.x+2,e.y-4-wing,half,8);
-    ctx.fillStyle='#f00';ctx.fillRect(e.x-4,e.y-3,3,3);ctx.fillRect(e.x+2,e.y-3,3,3);
-  }else if(e.type==='boss'){
-    ctx.fillStyle=flash?'#fff':'#cc2222';ctx.fillRect(e.x-half,e.y-half,e.size,e.size);
-    ctx.fillStyle=flash?'#fff':'#ff4444';ctx.fillRect(e.x-half+4,e.y-half+4,e.size-8,e.size-8);
-    ctx.fillStyle=flash?'#fff':'#880000';ctx.fillRect(e.x-half,e.y-half-12,8,16);ctx.fillRect(e.x+half-8,e.y-half-12,8,16);
-    ctx.fillStyle='#ff0';ctx.fillRect(e.x-12,e.y-6,8,8);ctx.fillRect(e.x+4,e.y-6,8,8);
-    ctx.fillStyle='#000';ctx.fillRect(e.x-10,e.y-4,4,4);ctx.fillRect(e.x+6,e.y-4,4,4);ctx.fillRect(e.x-10,e.y+8,20,4);
-    ctx.fillStyle='#333';ctx.fillRect(e.x-half,e.y-half-22,e.size,6);
-    ctx.fillStyle='#f00';ctx.fillRect(e.x-half,e.y-half-22,e.size*(e.hp/e.maxHp),6);
-  }
-}
-function drawHUD(){
-  const p=player;
-  ctx.fillStyle='rgba(0,0,0,0.7)';ctx.fillRect(0,0,canvas.width,36);
-  const hs=20;
-  for(let i=0;i<p.maxHp/2;i++){
-    const hx=8+i*(hs+4),hy=8;
-    const full=p.hp>=(i+1)*2,half2=!full&&p.hp>=i*2+1;
-    ctx.fillStyle=full?'#ff3333':half2?'#ff8888':'#442222';
-    ctx.beginPath();ctx.moveTo(hx+hs/2,hy+hs-3);
-    ctx.bezierCurveTo(hx,hy+hs/2,hx,hy+4,hx+hs/2,hy+4);
-    ctx.bezierCurveTo(hx+hs,hy+4,hx+hs,hy+hs/2,hx+hs/2,hy+hs-3);ctx.fill();
-  }
-  ctx.fillStyle='#ffd700';ctx.font='bold 16px monospace';ctx.fillText('KEY:'+p.keys,canvas.width/2-30,24);
-  ctx.fillStyle='#aaa';ctx.font='12px monospace';ctx.fillText('エリア'+(room+1)+'/3',canvas.width-80,24);
-  ctx.fillStyle='#fff';ctx.fillText('スコア:'+p.score,canvas.width/2+40,24);
-}
-function drawTitle(){
-  ctx.fillStyle='#000';ctx.fillRect(0,0,canvas.width,canvas.height);
-  ctx.fillStyle='#fff';
-  for(let i=0;i<50;i++){const sx=(i*137+50)%canvas.width,sy=(i*97+30)%canvas.height;ctx.fillRect(sx,sy,1+i%2,1+i%2);}
-  ctx.textAlign='center';
-  ctx.fillStyle='#ffd700';ctx.font='bold 40px monospace';ctx.fillText('ZELDA QUEST',canvas.width/2,140);
-  ctx.fillStyle='#88ff88';ctx.font='18px monospace';ctx.fillText('- 勇者の試練 -',canvas.width/2,175);
-  ctx.fillStyle='#22aa22';ctx.fillRect(canvas.width/2-15,220,30,35);
-  ctx.fillStyle='#f4c88e';ctx.fillRect(canvas.width/2-11,210,22,14);
-  ctx.fillStyle='#118811';ctx.fillRect(canvas.width/2-13,202,26,10);
-  ctx.fillStyle='#c0c0c0';ctx.fillRect(canvas.width/2+15,225,5,25);
-  ctx.fillStyle=Math.floor(frameCount/20)%2===0?'#fff':'#ffd700';ctx.font='20px monospace';ctx.fillText('Enter でスタート',canvas.width/2,330);
-  ctx.fillStyle='#aaa';ctx.font='14px monospace';
-  ctx.fillText('敵を倒し、鍵を集め、ボスを撃破せよ！',canvas.width/2,380);
-  ctx.fillText('矢印/WASD: 移動  Z/Space: 攻撃',canvas.width/2,410);
-  ctx.textAlign='left';
-}
-function drawGameOver(){
-  ctx.fillStyle='rgba(0,0,0,0.8)';ctx.fillRect(0,0,canvas.width,canvas.height);
-  ctx.textAlign='center';
-  ctx.fillStyle='#ff3333';ctx.font='bold 48px monospace';ctx.fillText('GAME OVER',canvas.width/2,200);
-  ctx.fillStyle='#fff';ctx.font='24px monospace';ctx.fillText('スコア: '+player.score,canvas.width/2,260);
-  ctx.fillStyle=Math.floor(frameCount/20)%2===0?'#fff':'#ffd700';ctx.font='18px monospace';ctx.fillText('Enter でリトライ',canvas.width/2,320);
-  ctx.textAlign='left';
-}
-function drawClear(){
-  ctx.fillStyle='rgba(0,0,0,0.85)';ctx.fillRect(0,0,canvas.width,canvas.height);
-  ctx.textAlign='center';
-  ctx.fillStyle='#ffd700';
-  for(let i=0;i<20;i++){const sx=(i*137+frameCount*2)%canvas.width,sy=(i*73+frameCount)%canvas.height;ctx.fillRect(sx,sy,3,3);}
-  ctx.font='bold 40px monospace';ctx.fillText('CONGRATULATIONS!',canvas.width/2,160);
-  ctx.fillStyle='#88ff88';ctx.font='28px monospace';ctx.fillText('ボスを倒した！',canvas.width/2,220);
-  ctx.fillStyle='#fff';ctx.font='22px monospace';ctx.fillText('最終スコア: '+player.score,canvas.width/2,270);
-  ctx.fillStyle=Math.floor(frameCount/20)%2===0?'#fff':'#ffd700';ctx.font='18px monospace';ctx.fillText('Enter でタイトルへ',canvas.width/2,330);
-  ctx.textAlign='left';
-}
-let transition={active:false,alpha:0,dir:1,nextRoom:0,nextX:0,nextY:0};
-function startTransition(nextRoom,px,py){transition={active:true,alpha:0,dir:1,nextRoom,nextX:px,nextY:py};}
-function update(){
-  frameCount++;
-  if(state!=='play')return;
-  if(transition.active){
-    transition.alpha+=transition.dir*0.08;
-    if(transition.alpha>=1&&transition.dir===1){initRoom(transition.nextRoom);player.x=transition.nextX;player.y=transition.nextY;transition.dir=-1;}
-    if(transition.alpha<=0&&transition.dir===-1)transition.active=false;
-    return;
-  }
-  const p=player;
-  let dx=0,dy=0;
-  if(keys['ArrowLeft']||keys['a']||keys['A']){dx=-p.speed;p.dir=1;}
-  if(keys['ArrowRight']||keys['d']||keys['D']){dx=p.speed;p.dir=0;}
-  if(keys['ArrowUp']||keys['w']||keys['W']){dy=-p.speed;p.dir=3;}
-  if(keys['ArrowDown']||keys['s']||keys['S']){dy=p.speed;p.dir=2;}
-  if(dx!==0&&dy!==0){dx*=0.707;dy*=0.707;}
-  const nx=p.x+dx,ny=p.y+dy;
-  if(isPassable(room,nx,p.y,p.size))p.x=nx;
-  if(isPassable(room,p.x,ny,p.size))p.y=ny;
-  p.x=Math.max(p.size/2,Math.min(canvas.width-p.size/2,p.x));
-  p.y=Math.max(p.size/2+36,Math.min(canvas.height-p.size/2,p.y));
-  if((keys['z']||keys['Z']||keys[' '])&&!p.attacking){p.attacking=true;p.attackTimer=18;}
-  if(p.attackTimer>0){p.attackTimer--;if(p.attackTimer===0)p.attacking=false;}
-  if(p.hitTimer>0)p.hitTimer--;
-  if(p.attacking){
-    const sb=getSwordBox(p);
-    enemies.forEach(e=>{
-      if(!e.alive||e.hitTimer>0)return;
-      if(circleRect(e.x,e.y,e.size/2,sb.x,sb.y,sb.w,sb.h)){
-        e.hp-=p.swordDmg;e.hitTimer=15;
-        if(e.hp<=0){e.alive=false;p.score+=e.type==='boss'?500:50;}
-        const kx=e.x-p.x,ky=e.y-p.y,kd=Math.sqrt(kx*kx+ky*ky)||1;
-        e.x+=kx/kd*20;e.y+=ky/kd*20;
+drawBg();
+
+// ─── REVEAL ON SCROLL ─────────────────────────────────────────────────────────
+const reveals = document.querySelectorAll('.reveal');
+const observer = new IntersectionObserver(entries => {
+  entries.forEach((entry, i) => {
+    if (entry.isIntersecting) {
+      setTimeout(() => {
+        entry.target.classList.add('visible');
+        // animate skill bars
+        entry.target.querySelectorAll('.skill-bar').forEach(bar => {
+          bar.style.width = bar.dataset.width + '%';
+        });
+      }, i * 100);
+      observer.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.15 });
+reveals.forEach(el => observer.observe(el));
+
+// also trigger skill bars when skill cards become visible individually
+document.querySelectorAll('.skill-card').forEach(card => {
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const bar = entry.target.querySelector('.skill-bar');
+        if (bar) bar.style.width = bar.dataset.width + '%';
+        obs.unobserve(entry.target);
       }
     });
-  }
-  enemies.forEach(e=>{
-    if(!e.alive)return;
-    if(e.hitTimer>0)e.hitTimer--;
-    const edx=p.x-e.x,edy=p.y-e.y,dist=Math.sqrt(edx*edx+edy*edy);
-    if(e.type==='slime'){e.timer++;if(e.timer%60<30&&dist<300){const nd=dist||1;const nx2=e.x+edx/nd*e.speed,ny2=e.y+edy/nd*e.speed;if(isPassable(room,nx2,e.y,e.size))e.x=nx2;if(isPassable(room,e.x,ny2,e.size))e.y=ny2;}}
-    else if(e.type==='bat'){const angle=Math.atan2(edy,edx)+Math.sin(frameCount*0.05)*0.5;const nx2=e.x+Math.cos(angle)*e.speed,ny2=e.y+Math.sin(angle)*e.speed;if(isPassable(room,nx2,e.y,e.size))e.x=nx2;if(isPassable(room,e.x,ny2,e.size))e.y=ny2;}
-    else if(e.type==='boss'){const nd=dist||1;const nx2=e.x+edx/nd*e.speed,ny2=e.y+edy/nd*e.speed;if(isPassable(room,nx2,e.y,e.size))e.x=nx2;if(isPassable(room,e.x,ny2,e.size))e.y=ny2;}
-    e.x=Math.max(e.size/2+TW,Math.min(canvas.width-e.size/2-TW,e.x));
-    e.y=Math.max(e.size/2+TW+36,Math.min(canvas.height-e.size/2-TW,e.y));
-    if(dist<(p.size+e.size)/2+8&&p.hitTimer===0){p.hp-=e.dmg;p.hitTimer=60;const kd=dist||1;p.x-=edx/kd*15;p.y-=edy/kd*15;if(p.hp<=0)state='gameover';}
-  });
-  items.forEach(it=>{
-    if(it.collected)return;
-    const dx2=p.x-it.x,dy2=p.y-it.y;
-    if(Math.sqrt(dx2*dx2+dy2*dy2)<p.size/2+12){
-      it.collected=true;const r=ROOMS[room];
-      if(it.type==='key'){p.keys++;p.score+=100;r[it.row][it.col]=T.FLOOR;}
-      else if(it.type==='chest'){p.hp=Math.min(p.maxHp,p.hp+2);p.score+=200;r[it.row][it.col]=T.FLOOR;}
-    }
-  });
-  const exits=ROOM_EXITS[room];
-  if(exits.right!==undefined&&p.x>canvas.width-p.size/2-2){
-    const tile=ROOMS[room][7][COLS-1];
-    if(tile===T.DOOR_OPEN||tile===T.FLOOR)startTransition(exits.right,p.size/2+TW+4,p.y);
-    else if(tile===T.DOOR_LOCKED){if(p.keys>0){p.keys--;ROOMS[room][7][COLS-1]=T.DOOR_OPEN;}else p.x=canvas.width-p.size/2-3;}
-  }
-  if(exits.left!==undefined&&p.x<p.size/2+2)startTransition(exits.left,canvas.width-p.size/2-TW-4,p.y);
-  if(getTile(room,p.x,p.y)===T.STAIRS&&enemies.filter(e=>e.type==='boss').every(e=>!e.alive))state='clear';
-}
-function render(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  if(state==='title'){drawTitle();return;}
-  if(state==='gameover'){drawGameOver();return;}
-  if(state==='clear'){drawClear();return;}
-  drawMap(room);enemies.forEach(e=>drawEnemy(e));drawPlayer(player);drawHUD();
-  if(transition.active&&transition.alpha>0){ctx.fillStyle=`rgba(0,0,0,${transition.alpha})`;ctx.fillRect(0,0,canvas.width,canvas.height);}
-  if(player.hitTimer>50){ctx.fillStyle=`rgba(255,0,0,${(player.hitTimer-50)/10*0.3})`;ctx.fillRect(0,0,canvas.width,canvas.height);}
-}
-document.addEventListener('keydown',e=>{
-  keys[e.key]=true;
-  if(e.key==='Enter'){
-    if(state==='title'){initPlayer();resetMapState();initRoom(0);state='play';}
-    else if(state==='gameover'){initPlayer();resetMapState();initRoom(0);state='play';}
-    else if(state==='clear')state='title';
-  }
-  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();
+  }, { threshold: 0.3 });
+  obs.observe(card);
 });
-document.addEventListener('keyup',e=>{keys[e.key]=false;});
-function resetMapState(){
-  ROOMS[0][5][7]=T.KEY;ROOMS[1][11][7]=T.CHEST;
-  ROOMS[0][7][15]=T.DOOR_OPEN;ROOMS[1][7][0]=T.DOOR_OPEN;
-  ROOMS[1][7][15]=T.DOOR_LOCKED;ROOMS[2][7][15]=T.DOOR_LOCKED;
-}
-function loop(){update();render();requestAnimationFrame(loop);}
-resetMapState();loop();
 </script>
 </body>
 </html>

@@ -24,7 +24,7 @@ const BLUESKY_POSTS_CORE = [
 
 const X_POSTS_CORE = [
   { id: 'core-history-slg-ja', text: `歴史シミュレーションを4本、ブラウザで無料公開しています。\n\n・三国志・天下三分（8シナリオ／10勢力）\n・戦国風雲記（街道・攻城ヘックス戦）\n・源平争乱記（兵力でなく"名分"を獲る）\n・太平風雲記（南北朝の正統性争い）\n\n全部インストール不要。フレームワークも不使用です。\n${SITE_URL}\n\n#個人開発 #ブラウザゲーム #シミュレーションゲーム` },
-  { id: 'core-ai-team-ja',     text: `ゲーム開発をAIエージェント19体のチームでやっています。\n\n企画→アセット制作→実装→品質ゲート（法務／脆弱性／日英表記）→動的テスト→採点→リリース。\nこのパイプラインごとサイトで公開しました。\n${AGENTS_URL}\n\n#AI駆動開発 #ClaudeCode #個人開発` },
+  { id: 'core-ai-team-ja',     text: `ゲーム開発をAIエージェント22体のチームでやっています。\n\n企画→アセット制作→実装→品質ゲート（法務／脆弱性／日英表記／アセット）→動的テスト→採点→リリース。\nこのパイプラインごとサイトで公開しました。\n${AGENTS_URL}\n\n#AI駆動開発 #ClaudeCode #個人開発` },
   { id: 'core-tech-en',        text: `I built 37 browser games with zero frameworks — just vanilla JS and the Canvas API.\n\nHex-grid battles, AI opponents, Web Audio synths: all hand-rolled.\nNo bundler, no npm install. Open the HTML and it runs.\n${SITE_URL}\n\n#JavaScript #CanvasAPI #gamedev #indiedev` },
   { id: 'core-casual-ja',      text: `将棋・囲碁・麻雀・チェス・花札・百人一首・バックギャモン…\nボードゲームだけで20本、ブラウザで無料で遊べます。\n\nアプリ入れなくていいので、通勤中の暇つぶしにどうぞ。\n${SITE_URL}\n\n#無料ゲーム #暇つぶし #将棋 #麻雀` },
 ];
@@ -33,7 +33,7 @@ const INSTAGRAM_POSTS = [
   {
     id: 'ig-hero',
     images: ['ig-01-hero.jpg', 'ig-02-strategy.jpg', 'ig-03-board.jpg', 'ig-04-team.jpg'],
-    caption: `ブラウザだけで遊べるゲームを37本、無料公開しています🎮\n\n▫️歴史シミュレーション4本（三国志・戦国・源平・南北朝）\n▫️ボードゲーム20本（将棋・囲碁・麻雀・チェス・花札…）\n▫️アクション・シューティング・パズル\n\nすべてインストール不要。ライブラリもフレームワークも使わず、素のJavaScriptとCanvas APIだけで作りました。\n\n開発はAIエージェント19体のチーム制。企画から品質チェック、リリースまでの流れもサイトで公開しています。\n\nプロフィールのリンクから遊べます👆\n\n—\n37 free browser games, no install required.\nBuilt with vanilla JavaScript and the Canvas API — zero frameworks.\nDeveloped by a team of 19 AI agents.\n\n#個人開発 #ブラウザゲーム #無料ゲーム #ゲーム制作 #JavaScript #CanvasAPI #AI駆動開発 #indiedev #gamedev #browsergames #retrogaming #将棋 #麻雀 #シミュレーションゲーム #プログラミング`,
+    caption: `ブラウザだけで遊べるゲームを37本、無料公開しています🎮\n\n▫️歴史シミュレーション4本（三国志・戦国・源平・南北朝）\n▫️ボードゲーム20本（将棋・囲碁・麻雀・チェス・花札…）\n▫️アクション・シューティング・パズル\n\nすべてインストール不要。ライブラリもフレームワークも使わず、素のJavaScriptとCanvas APIだけで作りました。\n\n開発はAIエージェント22体のチーム制。企画から品質チェック、リリースまでの流れもサイトで公開しています。\n\nプロフィールのリンクから遊べます👆\n\n—\n37 free browser games, no install required.\nBuilt with vanilla JavaScript and the Canvas API — zero frameworks.\nDeveloped by a team of 22 AI agents.\n\n#個人開発 #ブラウザゲーム #無料ゲーム #ゲーム制作 #JavaScript #CanvasAPI #AI駆動開発 #indiedev #gamedev #browsergames #retrogaming #将棋 #麻雀 #シミュレーションゲーム #プログラミング`,
   },
   {
     id: 'ig-genpei',
@@ -43,7 +43,7 @@ const INSTAGRAM_POSTS = [
   {
     id: 'ig-team',
     images: ['ig-04-team.jpg'],
-    caption: `ゲームを作っているのは、19体のAIエージェントのチームです🤖\n\nプランナーが仕様を書き、デザイナーが絵を作り、コードジェネレーターが実装し、法務・セキュリティ・多言語の3体が並列でチェック。テスターが実際にブラウザで動かして、エバリュエーターが100点満点で採点。80点未満はやり直しです。\n\nこのチーム表もサイトで公開しています。\n\n#AI駆動開発 #ClaudeCode #個人開発 #プログラミング #AIエージェント #buildinpublic #aitools #indiedev`,
+    caption: `ゲームを作っているのは、22体のAIエージェントのチームです🤖\n\nプランナーが仕様を書き、デザイナーが絵を作り、コードジェネレーターが実装し、法務・セキュリティ・多言語・アセットの4体が並列でチェック。テスターが実際にブラウザで動かして、エバリュエーターが100点満点で採点。80点未満はやり直しです。\n\nこのチーム表もサイトで公開しています。\n\n#AI駆動開発 #ClaudeCode #個人開発 #プログラミング #AIエージェント #buildinpublic #aitools #indiedev`,
   },
 ];
 

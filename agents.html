@@ -641,6 +641,19 @@
       </div>
     </article>
 
+    <!-- Asset Guardian -->
+    <article class="agent-card">
+      <div class="card-portrait">
+        <img src="assets/agents/asset-guardian.svg" alt="Asset Guardianエージェント" loading="lazy">
+      </div>
+      <div class="card-body">
+        <div class="card-name">アセット番人</div>
+        <div class="card-name-en">Asset Guardian</div>
+        <span class="card-role role-emerald">アセット方針</span>
+        <p class="card-desc">WebP方針・解像度・アルファ・参照整合・容量を機械検査で守る必須品質ゲート。404もエラーも出さずに絵が消える事故を止める。</p>
+      </div>
+    </article>
+
     <!-- Dynamic Tester -->
     <article class="agent-card">
       <div class="card-portrait">
@@ -759,6 +772,32 @@
 
   <h3 class="phase-title"><span class="phase-name">STANDALONE</span><span class="phase-ja">単独起動</span><span class="phase-desc">開発パイプラインとは独立して動く</span></h3>
   <section class="agents-grid">
+
+    <!-- Triage -->
+    <article class="agent-card">
+      <div class="card-portrait">
+        <img src="assets/agents/triage.svg" alt="Triageエージェント" loading="lazy">
+      </div>
+      <div class="card-body">
+        <div class="card-name">切り分け</div>
+        <div class="card-name-en">Triage</div>
+        <span class="card-role role-cyan">不具合の診断</span>
+        <p class="card-desc">「動かない」という報告から再現手順と観測事実を作り、壊れている層を1つに絞って担当へ渡す。直さないことが仕事。</p>
+      </div>
+    </article>
+
+    <!-- Verifier -->
+    <article class="agent-card">
+      <div class="card-portrait">
+        <img src="assets/agents/verifier.svg" alt="Verifierエージェント" loading="lazy">
+      </div>
+      <div class="card-body">
+        <div class="card-name">検査職人</div>
+        <div class="card-name-en">Verifier</div>
+        <span class="card-role role-lime">機械検査の作成</span>
+        <p class="card-desc">二度踏んだ「例外もエラーも出ない不具合」を verify スクリプトへ昇格させる。故障を仕込んで✗が出るまで納品しない。</p>
+      </div>
+    </article>
 
     <!-- English Teacher -->
     <article class="agent-card">
@@ -893,9 +932,9 @@
         <div style="width:2px;height:20px;background:rgba(6,182,212,0.35);"></div>
       </div>
 
-      <!-- Quality gates (3 parallel) -->
+      <!-- Quality gates (4 parallel) -->
       <div class="flow-arrowhead">▼</div>
-      <p class="flow-annotation" style="margin-bottom:6px;">品質ゲート — 3体を並列実行。すべて通過してから Dynamic Tester へ</p>
+      <p class="flow-annotation" style="margin-bottom:6px;">品質ゲート — 4体を並列実行。すべて通過してから Dynamic Tester へ</p>
       <div style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;">
         <div class="flow-node">
           <span class="flow-badge fb-legal">Legal Checker</span>
@@ -909,11 +948,15 @@
           <span class="flow-badge" style="color:#e879f9;border-color:rgba(232,121,249,0.5);background:rgba(232,121,249,0.08);">i18n</span>
           <span class="flow-badge-label">日英バイリンガル表記の担保 ※必須</span>
         </div>
+        <div class="flow-node">
+          <span class="flow-badge" style="color:#5eead4;border-color:rgba(94,234,212,0.5);background:rgba(94,234,212,0.08);">Asset Guardian</span>
+          <span class="flow-badge-label">WebP方針・参照整合・容量の検査 ※必須</span>
+        </div>
       </div>
 
       <!-- Legal Checker feedback routes -->
       <div style="margin:10px auto 6px;max-width:560px;background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.2);border-radius:12px;padding:12px 16px;">
-        <p style="font-size:0.66rem;color:rgba(251,191,36,0.75);letter-spacing:0.06em;text-align:center;margin-bottom:8px;">RED / YELLOW（法務）・CRITICAL（脆弱性）・翻訳漏れ 判定時の差し戻しルート</p>
+        <p style="font-size:0.66rem;color:rgba(251,191,36,0.75);letter-spacing:0.06em;text-align:center;margin-bottom:8px;">RED / YELLOW（法務）・CRITICAL（脆弱性）・翻訳漏れ・BLOCK（アセット）判定時の差し戻しルート</p>
         <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;">
           <div style="display:flex;flex-direction:column;align-items:center;gap:3px;">
             <span style="font-size:0.63rem;color:var(--text-dim);">グラフィック起因</span>
@@ -1039,8 +1082,16 @@
 
       <!-- Standalone agents -->
       <div class="flow-standalone">
-        <p class="flow-standalone-title">単独起動エージェント（開発パイプラインとは独立）</p>
+        <p class="flow-standalone-title">常設ユーティリティ・単独起動エージェント（どのフェーズからでも起動）</p>
         <div class="flow-standalone-row">
+          <div class="flow-node">
+            <span class="flow-badge" style="color:#7dd3fc;border-color:rgba(125,211,252,0.5);background:rgba(125,211,252,0.08);font-size:0.72rem;">Triage</span>
+            <span class="flow-badge-label">症状 → 再現 → 層の切り分け → 担当へ</span>
+          </div>
+          <div class="flow-node">
+            <span class="flow-badge" style="color:#bef264;border-color:rgba(190,242,100,0.5);background:rgba(190,242,100,0.08);font-size:0.72rem;">Verifier</span>
+            <span class="flow-badge-label">二度踏んだ無言バグ → 機械検査へ昇格</span>
+          </div>
           <div class="flow-node">
             <span class="flow-badge fb-solo" style="font-size:0.72rem;">English Teacher</span>
             <span class="flow-badge-label">英語学習支援（会話・添削・文法・発音）</span>
@@ -1166,35 +1217,44 @@
     { label: 'Code Gen',   color: '#818cf8', dx: 515, dy: 118, img: 'assets/agents/code-generator.svg',
       restFreq: 0.12, breakSpots: REGULAR_BREAKS,
       lines: ['実装完了！提出します。', 'バグ修正中です...', 'コードを最適化しています。', 'Evaluatorへ提出しますね。'] },
-    // Row 2 (y=230, 5席): 品質ゲート — Legal, Security, i18n, DynTest, Evaluator
-    { label: 'Legal',      color: '#fbbf24', dx: 95,  dy: 230, img: 'assets/agents/legal-checker.svg',
+    // Row 2 (y=230, 6席): 品質ゲート — Legal, Security, i18n, AssetGuard, DynTest, Evaluator
+    { label: 'Legal',      color: '#fbbf24', dx: 80, dy: 230, img: 'assets/agents/legal-checker.svg',
       restFreq: 0.25, breakSpots: REGULAR_BREAKS,
       lines: ['GREEN判定です！問題なし。', 'ライセンス確認しました。', '著作権クリアです。', 'REDが1件あります。要修正！'] },
-    { label: 'Security',   color: '#f87171', dx: 215, dy: 230, img: 'assets/agents/security.svg',
+    { label: 'Security',   color: '#f87171', dx: 180, dy: 230, img: 'assets/agents/security.svg',
       restFreq: 0.18, breakSpots: REGULAR_BREAKS,
       lines: ['XSSの脆弱性を発見！', 'セキュリティチェック完了。', '修正案を提示します。', 'SRI未設定です、要対応！'] },
-    { label: 'i18n',       color: '#e879f9', dx: 335, dy: 230, img: 'assets/agents/i18n.svg',
+    { label: 'i18n',       color: '#e879f9', dx: 280, dy: 230, img: 'assets/agents/i18n.svg',
       restFreq: 0.4, breakSpots: REGULAR_BREAKS,
       lines: ['英訳を当てました！', '訳語を統一中です...', 'ここ、日本語だけでした。', '日英バイリンガル、OKです。'] },
-    { label: 'DynTest',    color: '#34d399', dx: 455, dy: 230, img: 'assets/agents/dynamic-tester.svg',
+    { label: 'AssetGuard', color: '#5eead4', dx: 380, dy: 230, img: 'assets/agents/asset-guardian.svg',
+      restFreq: 0.35, breakSpots: REGULAR_BREAKS,
+      lines: ['WebP方針、守れています！', '参照が1件切れています。', '解像度は変えないでください！', 'assets、まだ余裕あります。'] },
+    { label: 'DynTest',    color: '#34d399', dx: 480, dy: 230, img: 'assets/agents/dynamic-tester.svg',
       restFreq: 0.3, breakSpots: REGULAR_BREAKS,
       lines: ['E2Eテスト全件グリーン！', 'UI動作を確認中です...', 'リグレッション検出、報告します。', 'スクリーンショット取得完了。'] },
-    { label: 'Evaluator',  color: '#c084fc', dx: 575, dy: 230, img: 'assets/agents/evaluator.svg',
+    { label: 'Evaluator',  color: '#c084fc', dx: 580, dy: 230, img: 'assets/agents/evaluator.svg',
       restFreq: 0.08, breakSpots: REGULAR_BREAKS,
       lines: ['採点中です...', '85点！合格ですね。', '診断レポート、出しました。', 'XSS検出、即不合格です。'] },
-    // Row 3 (y=342, 4席): 公開後の改善ループ — Optimizer, Refactoring, Game Balance, Achievement
-    { label: 'Optimizer',  color: '#a3e635', dx: 155,  dy: 342, img: 'assets/agents/optimizer.svg',
+    // Row 3 (y=342, 6席): 公開後の改善ループ＋常設ユーティリティ — Optimizer, Refactoring, Balance, Achievement, Triage, Verifier
+    { label: 'Optimizer',  color: '#a3e635', dx: 80, dy: 342, img: 'assets/agents/optimizer.svg',
       restFreq: 0.15, breakSpots: REGULAR_BREAKS,
       lines: ['60fps出ました！', '描画を最適化中です...', 'メモリリークを見つけました。', 'ここ、毎フレーム再生成してます。'] },
-    { label: 'Refactor',   color: '#a78bfa', dx: 275, dy: 342, img: 'assets/agents/refactoring.svg',
+    { label: 'Refactor',   color: '#a78bfa', dx: 180, dy: 342, img: 'assets/agents/refactoring.svg',
       restFreq: 0.2, breakSpots: REGULAR_BREAKS,
       lines: ['重複を共通化しました。', '責務を分離中です...', '外部の挙動は変えていません。', 'この関数、長すぎますね。'] },
-    { label: 'Balance',    color: '#eab308', dx: 395, dy: 342, img: 'assets/agents/game-balance.svg',
+    { label: 'Balance',    color: '#eab308', dx: 280, dy: 342, img: 'assets/agents/game-balance.svg',
       restFreq: 0.5, breakSpots: REGULAR_BREAKS,
       lines: ['難易度曲線を分析中...', 'この敵、強すぎますね。', 'パラメータ調整案です！', '序盤がやさしすぎます。'] },
-    { label: 'Achieve',    color: '#facc15', dx: 515, dy: 342, img: 'assets/agents/achievement-agent.svg',
+    { label: 'Achieve',    color: '#facc15', dx: 380, dy: 342, img: 'assets/agents/achievement-agent.svg',
       restFreq: 0.85, breakSpots: REGULAR_BREAKS,
       lines: ['実績称号20個完成！', 'ユニークな称号どうぞ〜', '次の称号を考え中...', '「伝説のデバッガー」どうですか？'] },
+    { label: 'Triage',     color: '#7dd3fc', dx: 480, dy: 342, img: 'assets/agents/triage.svg',
+      restFreq: 0.28, breakSpots: REGULAR_BREAKS,
+      lines: ['まず再現させてください。', '層を1つに絞りました！', 'その仮説、棄却できます。', '直すのは私じゃないんです。'] },
+    { label: 'Verifier',   color: '#bef264', dx: 580, dy: 342, img: 'assets/agents/verifier.svg',
+      restFreq: 0.24, breakSpots: REGULAR_BREAKS,
+      lines: ['わざと壊して確かめます。', '偽の緑、見つけました！', '検査を1本足しました。', '「緑になった」は成果じゃないです。'] },
     // Row 4 (y=454, 5席): ビジネス・支援 — Researcher, Marketer, Release, Accounting, English
     { label: 'Researcher', color: '#d97706', dx: 95,  dy: 454, img: 'assets/agents/researcher.svg',
       restFreq: 0.55, breakSpots: REGULAR_BREAKS,
@@ -1220,8 +1280,8 @@
   // Row groupings for long desk drawing (dy → seat x positions)
   const DESK_ROWS = [
     { dy: 118, dxs: [155, 275, 395, 515] },            // 企画・制作（4席）
-    { dy: 230, dxs: [95, 215, 335, 455, 575] },        // 品質ゲート（5席）
-    { dy: 342, dxs: [155, 275, 395, 515] },            // 公開後の改善ループ（4席）
+    { dy: 230, dxs: [80, 180, 280, 380, 480, 580] },   // 品質ゲート（6席）
+    { dy: 342, dxs: [80, 180, 280, 380, 480, 580] },   // 改善ループ＋常設ユーティリティ（6席）
     { dy: 454, dxs: [95, 215, 335, 455, 575] },        // ビジネス・支援（5席）
   ];
 

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI Notebook — hide</title>
-<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="assets/logo/favicon.svg" type="image/svg+xml">
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"
         integrity="sha384-oxHpXKMl0SqN5PH/OkQfnlvLbBEqkmk/VVH0mhFkxIjVsJ/0nyxRUoUFUSjQEXU"
         crossorigin="anonymous"></script>
@@ -24,6 +24,12 @@
     --red:     #f85149;
     --radius:  12px;
   }
+
+  /* 整形ライブラリ（CDN）が読めなかったときの通知と、書式なし表示 */
+  .md-unavailable { padding: 10px 16px; background: rgba(248,81,73,0.08);
+    border-bottom: 1px solid rgba(248,81,73,0.3); color: var(--text);
+    font-size: 0.8rem; line-height: 1.6; }
+  .result-plain { white-space: pre-wrap; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     background: var(--bg);
@@ -771,17 +777,31 @@ function saveResult(data) {
   localStorage.setItem('nb-result', JSON.stringify(resultCache));
 }
 
+// CDN（marked / DOMPurify）は回線・地域・プロキシ・jsdelivr側の更新で読めないことがある。
+// 読めないときに例外を投げると、書いた内容の表示ごと失われる。整形をあきらめて素のまま出す。
+// フォールバックは必ず textContent（innerHTML を使うと整形の代わりにXSSの経路ができる）。
+function renderMarkdownInto(el, text) {
+  el.className = 'result-body';
+  if (window.marked && window.DOMPurify) {
+    el.innerHTML = DOMPurify.sanitize(marked.parse(text));
+    return;
+  }
+  el.textContent = text;                 // 整形なし・改行はCSSの white-space に任せる
+  el.classList.add('result-plain');
+}
+
+// 何が起きたかを画面に残す。黙って素のまま表示すると「整形が壊れた」としか見えない。
+function notifyMarkdownUnavailable() {
+  const bar = document.createElement('div');
+  bar.className = 'md-unavailable';
+  bar.textContent = '整形ライブラリを読み込めませんでした（ネットワークまたはCDN）。'
+    + '結果は書式なしで表示します。Markdown formatting is unavailable — showing plain text.';
+  document.body.prepend(bar);
+}
+
 function renderResult(data) {
-  if (data.summary !== undefined) {
-    const el = document.getElementById('result-summary');
-    el.className = 'result-body';
-    el.innerHTML = DOMPurify.sanitize(marked.parse(data.summary));
-  }
-  if (data.outline !== undefined) {
-    const el = document.getElementById('result-outline');
-    el.className = 'result-body';
-    el.innerHTML = DOMPurify.sanitize(marked.parse(data.outline));
-  }
+  if (data.summary !== undefined) renderMarkdownInto(document.getElementById('result-summary'), data.summary);
+  if (data.outline !== undefined) renderMarkdownInto(document.getElementById('result-outline'), data.outline);
 }
 
 function showLoading(targets) {
@@ -864,7 +884,10 @@ document.querySelectorAll('.btn-download').forEach(btn => {
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 (function init() {
-  marked.setOptions({ breaks: true, gfm: true });
+  // ライブラリが読めていなくても、ここから先（ワーカー状態・資料一覧・保存済みの結果）は動かす。
+  // 以前は init の1行目で ReferenceError になり、ページ全体が無反応になっていた。
+  if (window.marked) marked.setOptions({ breaks: true, gfm: true });
+  else notifyMarkdownUnavailable();
   updateWorkerStatus();
   renderSources();
   if (resultCache.summary) renderResult({ summary: resultCache.summary });

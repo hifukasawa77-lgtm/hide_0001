@@ -65,6 +65,8 @@ hide_0001 Portfolio プロジェクトの記憶ハブ。Claude Codeはセッシ�
 - [[harness-maintenance-patterns]] — ハーネス保守のパターン・ハマりどころ（色ドリフト/スキル/hook2段/bash罠）
 - [[web-audio-singing-synthesis]] — Web Audioでの歌声合成（放射特性/音量正規化/広いCanvasのGrid突き抜け/WAV解析で検証）
 - [[native-dialog-toplayer-pitfall]] — ネイティブ`<dialog>`のトップレイヤーがposition:fixed要素を隠す不具合と対処
+- [[verification-counts-the-wrong-thing]] — 検査が数える対象を間違えると故障注入をすり抜ける
+- [[false-red-checks-are-worse-than-none]] — 偽の赤は検査が無いより悪い（必須検査が常に赤いなら、まず検査を疑う）
 
 ## 🔗 関連
 - リポジトリルートの `CLAUDE.md` — プロジェクト全体ルール

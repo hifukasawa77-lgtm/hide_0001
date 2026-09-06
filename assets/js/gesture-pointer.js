@@ -51,6 +51,22 @@ export const DEFAULTS = Object.freeze({
   //   なり、原因が分からないまま「なんとなく狙いにくい」だけが残る
   activeBox: { x0: 0.16, y0: 0.16, x1: 0.84, y1: 0.84 },
   mirror: true,
+  /* --- 静止クリック（つまむのが疲れる／指が動かしにくいとき） --- */
+  // ★既定はOFF。ONにすると「止めているだけ」で押されるので、意図しない誤爆が必ず起きる。
+  //   使う人が選んだときだけ効かせる
+  dwellEnabled: false,
+  /** 止まったと見なす半径（px）。手ぶれ取りの後でもこの程度は揺れる */
+  dwellRadius: 26,
+  /** この時間止め続けたら押す（ms） */
+  dwellMs: 900,
+  /* --- スクロールの加速 --- */
+  // 指の動きと1:1のままだと、長い記事で腕が何往復も要る。
+  // ゆっくり動かすときは1:1（狙いを外さない）、速く払うほど倍率を上げる
+  scrollGainMax: 3.2,
+  /** この速さ（px/秒）で倍率が最大になる */
+  scrollGainSpeed: 900,
+  /* --- 中指つまみ ＝ 右クリック --- */
+  secondaryEnabled: true,
   // 手ぶれ取り（1€フィルタ）。速く動かすほど追従を上げ、止めているほど滑らかにする
   minCutoff: 1.4,
   beta: 0.008,
@@ -144,6 +160,193 @@ export function pinchRatio(landmarks) {
 }
 
 /**
+ * 中指つまみの量。**人差し指つまみ＝左クリック、中指つまみ＝右クリック**に使う。
+ * 同じ手の別の指なので、持ち替えも道具も要らずに2種類の押下を作れる。
+ */
+export function secondaryPinchRatio(landmarks) {
+  if (!landmarks || landmarks.length <= LM.MIDDLE_TIP) return Number.POSITIVE_INFINITY;
+  return dist3(landmarks[LM.THUMB_TIP], landmarks[LM.MIDDLE_TIP]) / handScale(landmarks);
+}
+
+/**
+ * つまみ具合を 0〜1 で返す（1 = 押している）。
+ *
+ * ★これが無いと「押せたかどうか」が押した瞬間にしか分からない。
+ *   あと少しで押せるのか、まるで足りないのかが見えないと、空振りの理由が分からず
+ *   利用者は「効かない」としか言えなくなる。連続値にしてリングの縮み具合へ出す。
+ */
+export function pinchProgress(pinch, down = DEFAULTS.pinchDown, up = DEFAULTS.pinchUp) {
+  if (!Number.isFinite(pinch)) return 0;
+  if (up <= down) return pinch <= down ? 1 : 0;
+  return clamp01((up - pinch) / (up - down));
+}
+
+/**
+ * スクロールの倍率。ゆっくり動かすときは1:1のまま、速く払うほど上げる。
+ * ★遅いところを1:1に保つのが要点。全域で倍率を掛けると、狙った位置で止められなくなる。
+ */
+export function scrollGain(speed, { scrollGainMax = DEFAULTS.scrollGainMax, scrollGainSpeed = DEFAULTS.scrollGainSpeed } = {}) {
+  const magnitude = Math.abs(Number(speed) || 0);
+  if (scrollGainSpeed <= 0) return 1;
+  const t = clamp01(magnitude / scrollGainSpeed);
+  return 1 + (scrollGainMax - 1) * t * t;   // 二乗で立ち上げる（遅い側をより素直に）
+}
+
+/* ------------------------------------------------------------------ *
+ * 個人ごとの調整（キャリブレーション）
+ *
+ * ★閾値 0.42 / 0.58 は開発時の当て値で、誰の手でも合う保証はない。
+ *   手の大きさで正規化してあっても、指の長さの比・爪の長さ・関節の可動域は人それぞれで、
+ *   「つまんだつもりなのに反応しない」「開いているのに押されっぱなし」が起きる。
+ *   表情ケアが目の開きに個人基準を持つのと同じ考え方で、実際の手から作る。
+ * ★純粋関数にする。実機でしか集められない値でも、**判定そのものは机上で全部試せる**。
+ * ------------------------------------------------------------------ */
+
+/** 中央値。外れ値（1フレームの検出ミス）に引きずられないため平均を使わない */
+export function median(values) {
+  const sorted = [...(values ?? [])].filter((value) => Number.isFinite(value)).sort((left, right) => left - right);
+  if (!sorted.length) return NaN;
+  const middle = sorted.length >> 1;
+  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
+export const CALIBRATION_MIN_SAMPLES = 8;
+
+/**
+ * 「開いた手」と「つまんだ手」の実測から、押下の上下閾値を作る。
+ *
+ * @returns {{ok:true, pinchDown:number, pinchUp:number, open:number, closed:number}
+ *          | {ok:false, reason:string}}
+ *
+ * ★失敗を握りつぶさない。2つの山が重なっている（＝つまめていない／開けていない）ときに
+ *   無理やり閾値を作ると、**調整したのに前より当たらない**という最悪の結果になる。
+ *   理由を返して既定値を使わせる。
+ */
+export function deriveThresholds(openSamples, closedSamples) {
+  const open = median(openSamples);
+  const closed = median(closedSamples);
+  if (!Number.isFinite(open) || !Number.isFinite(closed)) return { ok: false, reason: '手を読み取れませんでした' };
+  if ((openSamples?.length ?? 0) < CALIBRATION_MIN_SAMPLES || (closedSamples?.length ?? 0) < CALIBRATION_MIN_SAMPLES) {
+    return { ok: false, reason: '手が写っている時間が短すぎました' };
+  }
+  if (closed >= open) return { ok: false, reason: 'つまんだ手と開いた手の区別がつきませんでした' };
+  const gap = open - closed;
+  // 開きとつまみが近すぎると、どこに線を引いても揺れで往復する
+  if (gap < 0.12) return { ok: false, reason: 'つまむ動きが小さすぎました（親指と人差し指をしっかり離してから、確実にくっつけてください）' };
+  // 2つの山の間に線を引く。押す側は近め（押しやすく）、離す側は遠め（離しやすく）
+  const pinchDown = closed + gap * 0.35;
+  const pinchUp = closed + gap * 0.65;
+  return { ok: true, pinchDown, pinchUp, open, closed };
+}
+
+/**
+ * 調整の進行。「開く」→「つまむ」の2段階ぶんの標本を集める。
+ * 画面側はこれに毎フレームのピンチ量を流し込むだけでよい。
+ */
+export class PinchCalibration {
+  constructor({ holdMs = 2500 } = {}) {
+    this.holdMs = holdMs;
+    this.reset();
+  }
+  reset() {
+    this.phase = 'open';            // 'open' → 'closed' → 'done'
+    this.open = [];
+    this.closed = [];
+    this.startedAt = null;
+    this.result = null;
+  }
+  /** いま画面に出すべき案内 */
+  get instruction() {
+    if (this.phase === 'open') return '手を開いたまま、カメラに向けてください';
+    if (this.phase === 'closed') return '親指と人差し指を、しっかりくっつけてください';
+    return this.result?.ok ? '調整できました' : `調整できませんでした: ${this.result?.reason ?? ''}`;
+  }
+  /** 0〜1。いまの段階がどこまで進んだか */
+  progress(now) {
+    if (this.phase === 'done' || this.startedAt === null) return this.phase === 'done' ? 1 : 0;
+    return clamp01((now - this.startedAt) / this.holdMs);
+  }
+  /**
+   * @param {number} pinch いまのピンチ量（手が見えていなければ NaN/Infinity を渡す）
+   * @returns {boolean} 段階が進んだか
+   */
+  sample(pinch, now) {
+    if (this.phase === 'done') return false;
+    if (!Number.isFinite(pinch)) {
+      // ★手が消えている間は数えない。数えると「見えていないのに時間だけ進む」ことになり、
+      //   標本が足りないまま次へ行って、質の悪い閾値ができる
+      this.startedAt = null;
+      return false;
+    }
+    if (this.startedAt === null) this.startedAt = now;
+    (this.phase === 'open' ? this.open : this.closed).push(pinch);
+    if (now - this.startedAt < this.holdMs) return false;
+    if (this.phase === 'open') { this.phase = 'closed'; this.startedAt = null; return true; }
+    this.phase = 'done';
+    this.result = deriveThresholds(this.open, this.closed);
+    return true;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * 設定の保存（調整結果・静止クリックの入切など）
+ *
+ * ★調整は毎回やり直させない。1回2〜5秒とはいえ、開くたびに求められると
+ *   「使うまでが面倒な機能」になり、結局誰も使わなくなる。
+ * ★storage を引数で受けるのは検査のため（localStorage は端末の状態に依存する）。
+ * ------------------------------------------------------------------ */
+export const SETTINGS_KEY = 'airtouch:settings:v1';
+/** 保存してよい値だけを通す。知らない鍵を素通しすると、古い版の設定が黙って効き続ける */
+const SETTING_KEYS = ['pinchDown', 'pinchUp', 'dwellEnabled', 'dwellMs', 'secondaryEnabled', 'navigateOnSwipe', 'dockSide'];
+
+export function sanitizeSettings(raw) {
+  const out = {};
+  if (!raw || typeof raw !== 'object') return out;
+  for (const key of SETTING_KEYS) {
+    const value = raw[key];
+    if (value === undefined || value === null) continue;
+    if (key === 'dockSide') { if (value === 'top' || value === 'bottom') out[key] = value; continue; }
+    if (typeof value === 'boolean') { out[key] = value; continue; }
+    if (typeof value === 'number' && Number.isFinite(value)) out[key] = value;
+  }
+  // 上下が逆に保存されていたら捨てる。逆のまま使うと押下が一度も成立しない
+  if (out.pinchDown !== undefined && out.pinchUp !== undefined && out.pinchUp <= out.pinchDown) {
+    delete out.pinchDown; delete out.pinchUp;
+  }
+  return out;
+}
+
+export function loadSettings(storage) {
+  try {
+    const raw = storage?.getItem?.(SETTINGS_KEY);
+    return raw ? sanitizeSettings(JSON.parse(raw)) : {};
+  } catch { return {}; }   // 壊れた値・シークレットタブ。既定へ落ちるだけで画面は止めない
+}
+
+export function saveSettings(patch, storage) {
+  const next = { ...loadSettings(storage), ...sanitizeSettings(patch) };
+  try { storage?.setItem?.(SETTINGS_KEY, JSON.stringify(next)); } catch { /* 保存できなくても今回は動く */ }
+  return next;
+}
+
+/**
+ * いま何ができるかの一覧。**設定で切ってあるものは載せない**——
+ * 出来ないことが書いてあると、試して反応しないときに「壊れている」と受け取られる。
+ */
+export function helpText(options = {}) {
+  const lines = [
+    '👌 つまむ = タップ / Pinch = tap',
+    '✋ つまんだまま動かす = ドラッグ・スクロール / Pinch & move = drag or scroll',
+    '💨 速く払う = スワイプ / Flick = swipe',
+  ];
+  if (options.secondaryEnabled !== false) lines.push('🤏 中指でつまむ = 右クリック / Middle-finger pinch = right click');
+  if (options.dwellEnabled) lines.push('⏱ 止めて待つ = タップ（つままなくてよい） / Hold still = tap');
+  if (options.navigateOnSwipe) lines.push('↩️ 右へ払う = 前のページへ戻る / Flick right = go back');
+  lines.push('🖐 手を下ろす = ポインターを消す / Lower your hand = hide the pointer');
+  return lines.join('\n');
+}
+
+/**
  * ポインターの位置に使う点。
  * 人差し指の先そのものではなく、**親指の先との中点**を使う。
  * 摘まむ動作で人差し指の先は必ず動くので、指先を使うと「押した瞬間にポインターがずれる」。
@@ -188,6 +391,12 @@ export class GestureEngine {
     this._lastSeen = 0;
     this._lastT = 0;
     this._down = null;
+    this.progress = 0;          // つまみ具合 0〜1（連続表示用）
+    this.secondary = false;     // 中指つまみ＝右クリック
+    this.dwell = 0;             // 静止クリックの進み具合 0〜1
+    this._stillAt = null;
+    this._stillX = 0; this._stillY = 0;
+    this._dwellFired = false;
   }
 
   /**
@@ -210,6 +419,8 @@ export class GestureEngine {
             dist: 0, vx: 0, vy: 0, tap: false, swipe: null, cancelled: true });
         }
         this.visible = false;
+        this.progress = 0; this.dwell = 0; this.secondary = false;
+        this._stillAt = null; this._dwellFired = false;
         this.fx.reset(); this.fy.reset();
         events.push({ type: 'disappear' });
       }
@@ -241,6 +452,40 @@ export class GestureEngine {
     this.x = px; this.y = py; this._lastT = now;
     this._lastSeen = now;
     this.pinch = pinchRatio(hand.landmarks);
+    // 「あと少しで押せる」を見せるための連続値。押した瞬間だけ変わる表示では、
+    // 空振りしたときに何が足りないのか利用者に分からない
+    this.progress = pinchProgress(this.pinch, opts.pinchDown, opts.pinchUp);
+
+    // 中指つまみ＝右クリック。同じ手の別の指なので持ち替えが要らない。
+    // ★人差し指が開いていることを条件に入れる。**摘まむと中指も一緒に親指へ寄る**ので、
+    //   中指だけを見ると普通のタップが右クリックにもなる（例外は出ず、押すたびにメニューが出る）
+    if (opts.secondaryEnabled) {
+      const second = secondaryPinchRatio(hand.landmarks);
+      const indexOpen = this.pinch >= opts.pinchUp;
+      if (!this.pressed && !this.secondary && indexOpen && second <= opts.pinchDown) {
+        this.secondary = true;
+        events.push({ type: 'secondary', x: px, y: py });
+      } else if (this.secondary && second >= opts.pinchUp) {
+        this.secondary = false;
+      }
+    }
+
+    // 静止クリック。つまむのが疲れる／指が動かしにくいときの代わり。
+    // ★既定はOFF。止めているだけで押されるので、意図しない誤爆が必ず起きる
+    if (opts.dwellEnabled && !this.pressed && !this.secondary) {
+      const moved = this._stillAt === null ? Infinity : Math.hypot(px - this._stillX, py - this._stillY);
+      if (moved > opts.dwellRadius) {
+        this._stillAt = now; this._stillX = px; this._stillY = py; this._dwellFired = false;
+      }
+      this.dwell = this._dwellFired ? 0 : clamp01((now - (this._stillAt ?? now)) / opts.dwellMs);
+      if (!this._dwellFired && this.dwell >= 1) {
+        this._dwellFired = true;
+        this.dwell = 0;
+        events.push({ type: 'dwell', x: px, y: py });
+      }
+    } else {
+      this.dwell = 0; this._stillAt = null; this._dwellFired = false;
+    }
 
     // ヒステリシス付きの押下判定
     if (!this.pressed && this.pinch <= opts.pinchDown) {
@@ -258,12 +503,16 @@ export class GestureEngine {
       events.push({ type: 'up', x: px, y: py, ms, dist: moved, vx: this.vx, vy: this.vy, tap, swipe, cancelled: false });
     }
 
-    events.push({ type: 'move', x: px, y: py, dx, dy, pressed: this.pressed });
+    // vx/vy を move にも載せる。作用層のスクロール加速が「今どれだけ速いか」を知るため
+    events.push({ type: 'move', x: px, y: py, dx, dy, vx: this.vx, vy: this.vy, pressed: this.pressed });
     return this.snapshot(events);
   }
 
   snapshot(events) {
-    return { visible: this.visible, x: this.x, y: this.y, pinch: this.pinch, pressed: this.pressed, events };
+    return {
+      visible: this.visible, x: this.x, y: this.y, pinch: this.pinch, pressed: this.pressed,
+      progress: this.progress, secondary: this.secondary, dwell: this.dwell, events,
+    };
   }
 }
 
@@ -295,9 +544,28 @@ const STYLE = `
   position:absolute; left:50%; top:50%; width:8px; height:8px; margin:-4px 0 0 -4px;
   border-radius:50%; background:#e6edf6;
 }
-.airtouch-cursor.is-pressed .ring{
-  transform:scale(.58); border-color:rgba(167,139,250,.95); background:rgba(167,139,250,.30);
+/* つまみ具合を輪の縮み方で連続的に見せる。押した瞬間だけ変わる表示だと、
+   空振りしたときに「あと少しだった」のか「全然だった」のかが分からない */
+.airtouch-cursor .ring{transform:scale(calc(1 - var(--airtouch-progress, 0) * .42))}
+/* 進み具合の円弧（つまみ＝シアン / 静止クリック＝パープル）。
+   mask で中を抜いてリング状にする。要素を増やさず角度だけで表せる */
+.airtouch-cursor .arc{
+  position:absolute; inset:-5px; border-radius:50%; opacity:0;
+  -webkit-mask:radial-gradient(closest-side, transparent 76%, #000 78%);
+          mask:radial-gradient(closest-side, transparent 76%, #000 78%);
 }
+.airtouch-cursor .arc.pinch{
+  background:conic-gradient(rgba(34,211,238,.95) calc(var(--airtouch-progress, 0) * 360deg), transparent 0);
+  opacity:calc(var(--airtouch-progress, 0) * .95);
+}
+.airtouch-cursor .arc.dwell{
+  background:conic-gradient(rgba(167,139,250,.95) calc(var(--airtouch-dwell, 0) * 360deg), transparent 0);
+  opacity:calc(var(--airtouch-dwell, 0) * .95);
+}
+.airtouch-cursor.is-pressed .ring{
+  border-color:rgba(167,139,250,.95); background:rgba(167,139,250,.30);
+}
+.airtouch-cursor.is-secondary .ring{border-color:rgba(251,191,36,.95); background:rgba(251,191,36,.26)}
 .airtouch-cursor.is-dragging .ring{border-style:dashed}
 .airtouch-ripple{
   position:absolute; left:0; top:0; width:22px; height:22px; margin:-11px 0 0 -11px;
@@ -324,6 +592,16 @@ const STYLE = `
 /* 前面カメラは鏡で見せる。鏡にしないと、手を右へ動かしたとき映像だけ左へ動いて狙えない */
 .airtouch-preview video{transform:scaleX(-1)}
 .airtouch-preview[hidden]{display:none}
+/* プレビューは邪魔になったら上へ逃がす／消せる。実機では下端に置くと
+   ちょうど押したいボタンの上に重なることがある */
+.airtouch-dock.is-top{top:calc(12px + env(safe-area-inset-top)); bottom:auto; flex-direction:column-reverse}
+/* できることの一覧。何ができるか分からないまま手をかざしても、何も起きない */
+.airtouch-help{
+  padding:10px 14px; border-radius:14px; font-size:.74rem; line-height:1.6;
+  background:rgba(8,10,18,.9); color:#e6edf6; border:1px solid rgba(167,139,250,.32);
+  max-width:min(92vw,420px); text-align:left; white-space:pre-line;
+}
+.airtouch-help[hidden]{display:none}
 .${HOVER_CLASS}{outline:2px solid rgba(34,211,238,.55); outline-offset:2px}
 .${DRAG_CLASS}{opacity:.62}
 @media (prefers-reduced-motion:reduce){
@@ -375,23 +653,35 @@ function newDataTransfer() {
  *   自分で出さないと、mouse系だけを聞いている既存のUIが一切反応しない。
  */
 export class PointerDriver {
-  constructor({ doc = document, root = null, onGesture = null, reducedMotion = false } = {}) {
+  constructor({
+    doc = document, root = null, onGesture = null, reducedMotion = false,
+    navigateOnSwipe = false,
+    scrollGainMax = DEFAULTS.scrollGainMax, scrollGainSpeed = DEFAULTS.scrollGainSpeed,
+  } = {}) {
     this.doc = doc;
     this.onGesture = onGesture;
     this.reducedMotion = reducedMotion;
+    // ★既定OFF。横に払っただけで前のページへ戻ると、書きかけの入力が消える
+    this.navigateOnSwipe = navigateOnSwipe;
+    this.scrollGainMax = scrollGainMax;
+    this.scrollGainSpeed = scrollGainSpeed;
     ensureStyle(doc);
     this.layer = doc.createElement('div');
     this.layer.className = 'airtouch-layer';
     this.layer.setAttribute('aria-hidden', 'true');
     this.cursor = doc.createElement('div');
     this.cursor.className = 'airtouch-cursor';
-    this.cursor.innerHTML = '<span class="ring"></span><span class="dot"></span>';
+    this.cursor.innerHTML = '<span class="arc pinch"></span><span class="arc dwell"></span>'
+      + '<span class="ring"></span><span class="dot"></span>';
     this.dock = doc.createElement('div');
     this.dock.className = 'airtouch-dock';
+    this.help = doc.createElement('div');
+    this.help.className = 'airtouch-help';
+    this.help.hidden = true;
     this.hint = doc.createElement('div');
     this.hint.className = 'airtouch-hint';
     this.hint.hidden = true;
-    this.dock.appendChild(this.hint);
+    this.dock.append(this.help, this.hint);
     this.layer.append(this.cursor, this.dock);
     (root ?? doc.body).appendChild(this.layer);
 
@@ -418,16 +708,38 @@ export class PointerDriver {
     this.hint.hidden = !text;
   }
 
+  /** できることの一覧を出す（空文字・null で消す） */
+  setHelp(text) {
+    this.help.textContent = text ?? '';
+    this.help.hidden = !text;
+  }
+
+  helpVisible() { return !this.help.hidden; }
+
+  /** プレビューと案内文の置き場所。押したいものと重なったら上へ逃がす */
+  setDockSide(side) {
+    this.dockSide = side === 'top' ? 'top' : 'bottom';
+    this.dock.classList.toggle('is-top', this.dockSide === 'top');
+    return this.dockSide;
+  }
+
   /** 判定層の1フレーム分の結果を画面と実DOMへ反映する */
   apply(frame) {
     this.cursor.style.transform = `translate(${frame.x}px, ${frame.y}px)`;
     this.cursor.classList.toggle('is-visible', frame.visible);
     this.cursor.classList.toggle('is-pressed', frame.pressed);
+    this.cursor.classList.toggle('is-secondary', frame.secondary === true);
+    // 押し切る前の「あと少し」を連続で見せる。CSS変数にしておけば
+    // 見た目（円弧・輪の縮み）はスタイル側だけで差し替えられる
+    this.cursor.style.setProperty('--airtouch-progress', String(frame.progress ?? 0));
+    this.cursor.style.setProperty('--airtouch-dwell', String(frame.dwell ?? 0));
     for (const event of frame.events) {
       if (event.type === 'appear') this.cancelInertia();
       else if (event.type === 'down') this.handleDown(event);
       else if (event.type === 'move') this.handleMove(event);
       else if (event.type === 'up') this.handleUp(event);
+      else if (event.type === 'secondary') this.handleSecondary(event);
+      else if (event.type === 'dwell') this.handleDwell(event);
       else if (event.type === 'disappear') this.clearHover();
     }
   }
@@ -518,9 +830,14 @@ export class PointerDriver {
     }
 
     if (this.mode === 'pan' && this.scroller) {
-      // 指の動きと中身の動きを一致させる（下へ払ったら中身も下へ）
-      this.scroller.scrollTop -= event.dy;
-      this.scroller.scrollLeft -= event.dx;
+      // 指の動きと中身の動きを一致させる（下へ払ったら中身も下へ）。
+      // ★ゆっくり動かすときは1:1のまま（狙いを外さない）、速く払うほど倍率を上げる。
+      //   常に等倍だと長い記事で腕が何往復も要り、これが一番疲れる
+      const gain = scrollGain(Math.hypot(event.vx ?? 0, event.vy ?? 0), {
+        scrollGainMax: this.scrollGainMax, scrollGainSpeed: this.scrollGainSpeed,
+      });
+      this.scroller.scrollTop -= event.dy * gain;
+      this.scroller.scrollLeft -= event.dx * gain;
     }
   }
 
@@ -561,9 +878,42 @@ export class PointerDriver {
     this.emit('tap', { x, y, target });
   }
 
+  /** 中指つまみ＝右クリック。同じ手のまま持ち替えずに出せる */
+  handleSecondary(event) {
+    const target = this.elementAt(event.x, event.y);
+    if (!target) return;
+    this.ripple(event.x, event.y);
+    // contextmenu だけでは「右ボタンで押した」ことにならない受け側がある。
+    // 本物のマウスと同じ並び（down → up → contextmenu）で出す
+    this.fire(target, 'pointerdown', event.x, event.y, { buttons: 2, button: 2 });
+    this.fire(target, 'mousedown', event.x, event.y, { mouse: true, buttons: 2, button: 2 });
+    this.fire(target, 'mouseup', event.x, event.y, { mouse: true, button: 2 });
+    this.fire(target, 'contextmenu', event.x, event.y, { mouse: true, button: 2 });
+    this.emit('secondary', { x: event.x, y: event.y, target });
+  }
+
+  /** 静止クリック。つまむのが疲れる／指が動かしにくい人のための代わりの押し方 */
+  handleDwell(event) {
+    const target = this.elementAt(event.x, event.y);
+    if (!target) return;
+    this.fire(target, 'pointerdown', event.x, event.y, { buttons: 1 });
+    this.fire(target, 'mousedown', event.x, event.y, { mouse: true, buttons: 1 });
+    this.fire(target, 'pointerup', event.x, event.y);
+    this.fire(target, 'mouseup', event.x, event.y, { mouse: true });
+    this.tap(target, event.x, event.y);
+    this.emit('dwell', { x: event.x, y: event.y, target });
+  }
+
   swipe(event) {
     const scroller = this.scroller ?? scrollableAncestor(this.downTarget ?? this.doc.body, 'y');
     this.emit('swipe', { x: event.x, y: event.y, dir: event.swipe.dir, vx: event.vx, vy: event.vy, target: this.downTarget ?? null });
+    // 横払いで戻る／進む。★既定OFF（書きかけの入力が消えるので、選んだ人だけ）
+    if (this.navigateOnSwipe && (event.swipe.dir === 'right' || event.swipe.dir === 'left')) {
+      const history = this.doc.defaultView?.history;
+      if (event.swipe.dir === 'right') history?.back?.();
+      else history?.forward?.();
+      return;
+    }
     if (scroller && !this.reducedMotion) this.startInertia(scroller, event.vx, event.vy);
   }
 
@@ -607,11 +957,11 @@ export class PointerDriver {
   }
 
   /* --- イベント合成 ------------------------------------------------ */
-  fire(target, type, x, y, { mouse = false, buttons = 0, bubbles = true, detail = 0 } = {}) {
+  fire(target, type, x, y, { mouse = false, buttons = 0, button = 0, bubbles = true, detail = 0 } = {}) {
     if (!target?.dispatchEvent) return;
     const init = {
       bubbles, composed: true, cancelable: true, view: this.doc.defaultView,
-      clientX: x, clientY: y, screenX: x, screenY: y, buttons, button: 0, detail,
+      clientX: x, clientY: y, screenX: x, screenY: y, buttons, button, detail,
     };
     const Ctor = mouse ? this.doc.defaultView.MouseEvent : this.doc.defaultView.PointerEvent;
     const event = mouse ? new Ctor(type, init)
@@ -766,6 +1116,11 @@ export function createHandSource({ onStatus = null, facingMode = 'user' } = {}) 
 /* ------------------------------------------------------------------ *
  * まとめ役 — カメラ・判定・作用をつなぐ
  * ------------------------------------------------------------------ */
+/** localStorage は端末の状態で丸ごと落ちる（シークレットタブ・容量枯渇・設定でブロック） */
+function safeStorage(doc) {
+  try { return doc?.defaultView?.localStorage ?? null; } catch { return null; }
+}
+
 export class AirTouch {
   /**
    * @param {object} options
@@ -773,13 +1128,21 @@ export class AirTouch {
    * @param {Function} [options.onStatus] 画面へ出す状態の通知
    * @param {Function} [options.onGesture] タップ等が起きたときの通知
    */
-  constructor({ doc = document, createSource = null, onStatus = null, onGesture = null, engine = {}, preview = true } = {}) {
+  constructor({
+    doc = document, createSource = null, onStatus = null, onGesture = null,
+    engine = {}, preview = true, storage = undefined,
+  } = {}) {
     this.doc = doc;
     this.createSource = createSource ?? ((opts) => createHandSource(opts));
     this.onStatus = onStatus;
     this.onGesture = onGesture;
-    this.engineOptions = engine;
+    // 保存済みの設定（調整結果・静止クリックの入切）を土台にする。
+    // 呼び出し側が明示した値の方が強い
+    this.storage = storage === undefined ? safeStorage(doc) : storage;
+    this.settings = loadSettings(this.storage);
+    this.engineOptions = { ...this.settings, ...engine };
     this.wantPreview = preview;
+    this.calibration = null;
     this.enabled = false;
     this.source = null;
     this.driver = null;
@@ -797,7 +1160,11 @@ export class AirTouch {
     if (this.enabled) return true;
     const reduced = this.doc.defaultView.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false;
     this.engine = new GestureEngine(this.engineOptions);
-    this.driver = new PointerDriver({ doc: this.doc, onGesture: this.onGesture, reducedMotion: reduced });
+    this.driver = new PointerDriver({
+      doc: this.doc, onGesture: this.onGesture, reducedMotion: reduced,
+      navigateOnSwipe: this.engineOptions.navigateOnSwipe === true,
+    });
+    this.driver.setDockSide(this.engineOptions.dockSide ?? 'bottom');
     this.driver.setHint('カメラを準備しています… / Starting camera…');
     this.source = this.createSource({ onStatus: (s) => { this.driver?.setHint(s.text); this.status(s); } });
     try {
@@ -824,6 +1191,72 @@ export class AirTouch {
     return true;
   }
 
+  /**
+   * 設定を1つ変える。**動かしたまま効く**——切り替えるたびにカメラを掴み直すと、
+   * 許可の確認が出たり数秒待たされたりして、試しながら調整できない
+   */
+  setSetting(key, value) {
+    const patch = { [key]: value };
+    const clean = sanitizeSettings(patch);
+    if (!(key in clean)) return this.settings;
+    this.settings = saveSettings(clean, this.storage);
+    Object.assign(this.engineOptions, clean);
+    if (this.engine) Object.assign(this.engine.options, clean);
+    if (this.driver) {
+      if (key === 'navigateOnSwipe') this.driver.navigateOnSwipe = clean[key] === true;
+      if (key === 'dockSide') this.driver.setDockSide(clean[key]);
+      if (this.driver.helpVisible()) this.driver.setHelp(helpText(this.engineOptions));
+    }
+    return this.settings;
+  }
+
+  /** できることの一覧を出す／消す */
+  toggleHelp(show) {
+    if (!this.driver) return false;
+    const next = show ?? !this.driver.helpVisible();
+    this.driver.setHelp(next ? helpText(this.engineOptions) : '');
+    return next;
+  }
+
+  /** 手の大きさ・つまみ方の個人差を実測して閾値を作り直す */
+  startCalibration() {
+    if (!this.enabled) return false;
+    this.calibration = new PinchCalibration();
+    this.driver.setHint(this.calibration.instruction);
+    return true;
+  }
+
+  cancelCalibration() {
+    this.calibration = null;
+    this.driver?.setHint('指をかざしてください。つまむとタップ / Pinch to tap');
+  }
+
+  /** 調整の1フレーム分。tick から呼ぶ（検査からも直接呼べるように切り出す） */
+  stepCalibration(now) {
+    const cal = this.calibration;
+    if (!cal) return null;
+    const pinch = this._hand?.landmarks ? pinchRatio(this._hand.landmarks) : NaN;
+    cal.sample(pinch, now);
+    // 進み具合はカーソルの円弧を借りて見せる（見る場所を増やさない）
+    this.driver?.cursor.style.setProperty('--airtouch-dwell', String(cal.progress(now)));
+    if (cal.phase !== 'done') {
+      this.driver?.setHint(cal.instruction);
+      return cal;
+    }
+    this.calibration = null;
+    this.driver?.cursor.style.setProperty('--airtouch-dwell', '0');
+    if (cal.result?.ok) {
+      this.setSetting('pinchDown', cal.result.pinchDown);
+      this.setSetting('pinchUp', cal.result.pinchUp);
+      this.driver?.setHint(`調整できました（つまみ ${cal.result.pinchDown.toFixed(2)}〜${cal.result.pinchUp.toFixed(2)}） / Calibrated`);
+    } else {
+      // ★失敗しても既定値のまま使える。「調整できないと使えない」にはしない
+      this.driver?.setHint(`${cal.instruction} — これまでの設定のまま使えます`);
+    }
+    this.status({ stage: 'calibration', text: cal.instruction, level: cal.result?.ok ? 'info' : 'warn', result: cal.result });
+    return cal;
+  }
+
   disable() {
     if (!this.enabled && !this.source) return;
     this.enabled = false;
@@ -834,6 +1267,7 @@ export class AirTouch {
     this.driver?.destroy(); this.driver = null;
     this.engine = null;
     this._hand = null;
+    this.calibration = null;
   }
 
   mountPreview(video) {
@@ -873,6 +1307,14 @@ export class AirTouch {
     const frame = this.engine.update(this._hand, now, {
       width: view.innerWidth, height: view.innerHeight,
     });
+    if (this.calibration) {
+      // ★調整中は押下を実DOMへ通さない。閾値を測っている最中のつまみで
+      //   ボタンが押されると、調整するたびに画面が勝手に動く（カーソルは出したままにする）
+      this.driver.apply({ ...frame, pressed: false, events: frame.events.filter((e) => e.type === 'appear' || e.type === 'disappear') });
+      this.stepCalibration(now);
+      this.drawPreview();
+      return frame;
+    }
     this.driver.apply(frame);
     this.drawPreview();
     return frame;

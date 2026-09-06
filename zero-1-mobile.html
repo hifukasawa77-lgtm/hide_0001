@@ -228,6 +228,13 @@
     .row{display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--border)}
     .row:last-child{border-bottom:none}
     .row .t{flex:1} .row .t b{display:block; font-size:.88rem} .row .t small{color:var(--muted); font-size:.75rem}
+    /* エアタッチの細かい設定。親の行にぶら下げるので少し内側に寄せて、
+       上の行との境界線は消す（別の設定に見えると探しに行けない） */
+    .row.sub{padding-left:14px; border-top:none; margin-top:-4px}
+    .row.sub .t b{font-size:.82rem; color:var(--muted)}
+    .row.sub .opts{display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end}
+    .row.sub .ghost{padding:6px 10px; font-size:.76rem}
+    .ghost[aria-pressed="true"]{border-color:rgba(34,211,238,0.6); color:#a5f3fc; background:rgba(34,211,238,0.12)}
     .ghost{background:transparent; color:var(--text); border:1px solid var(--border); border-radius:11px; padding:8px 12px; font:inherit; font-size:.82rem; cursor:pointer}
     .backdrop{position:fixed; inset:0; z-index:4; background:rgba(0,0,0,0.5)}
     @media (prefers-reduced-motion:reduce){ *{animation:none !important; transition:none !important} }
@@ -312,6 +319,16 @@
   <div class="row">
     <span class="t"><b>エアタッチ / Air touch</b><small id="air-note">カメラに指をかざすとポインターが出ます。つまむとタップ、つまんだまま動かすとスワイプ・ドラッグ。映像は端末から出ません。</small></span>
     <button class="ghost" id="btn-air-2" aria-pressed="false">OFF</button>
+  </div>
+  <!-- ★エアタッチが動いている間だけ出す。使えないうちから並んでいても選びようがない -->
+  <div class="row sub" id="air-options" hidden>
+    <span class="t"><b>使い方の調整 / Tuning</b><small id="air-tune-note">つまみ方には個人差があります。合わせると狙いが安定します。</small></span>
+    <span class="opts">
+      <button class="ghost" id="btn-air-cal">つまみを合わせる / Calibrate</button>
+      <button class="ghost" id="btn-air-help" aria-pressed="false">できること / Gestures</button>
+      <button class="ghost" id="btn-air-dwell" aria-pressed="false">静止クリック / Dwell</button>
+      <button class="ghost" id="btn-air-dock" aria-pressed="false">表示を上へ / Move up</button>
+    </span>
   </div>
   <div class="row">
     <span class="t"><b>モデルを変える / Change model</b><small id="current-model">—</small></span>
@@ -1914,13 +1931,20 @@ function openSheet(open) {
 //   使わない人にまで払わせない（このページの主目的はLLMであってカメラではない）。
 // ★カメラは押した回数だけ確実に止める。止め忘れるとランプが点きっぱなしになる。
 // ---------------------------------------------------------------------------
-const air = { module:null, instance:null, busy:false, on:false };
+const air = { module:null, instance:null, busy:false, on:false, helpOn:false };
 
 function paintAir() {
   $('btn-air').setAttribute('aria-pressed', String(air.on));
   $('btn-air-2').setAttribute('aria-pressed', String(air.on));
   $('btn-air-2').textContent = air.busy ? '…' : air.on ? 'ON' : 'OFF';
   $('btn-air').textContent = air.on ? '🖐' : '✋';
+  // 細かい設定は動いている間だけ。止まっている状態で押しても何も起きず、
+  // 「押したのに反応しない」＝壊れている、と受け取られる
+  $('air-options').hidden = !air.on;
+  const settings = air.instance?.settings ?? {};
+  $('btn-air-dwell').setAttribute('aria-pressed', String(settings.dwellEnabled === true));
+  $('btn-air-dock').setAttribute('aria-pressed', String(settings.dockSide === 'top'));
+  $('btn-air-help').setAttribute('aria-pressed', String(air.helpOn === true));
 }
 
 async function toggleAir() {
@@ -1949,6 +1973,9 @@ async function toggleAir() {
       openSheet(true);
     } else {
       $('air-note').textContent = 'カメラに指をかざすとポインターが出ます。つまむとタップ、つまんだまま動かすとスワイプ・ドラッグ。映像は端末から出ません。';
+      // ★最初の1回だけ、できることを画面に出す。何ができるか分からないまま
+      //   手をかざしても何も起きず、「動かない」と判断されて二度と使われない
+      air.helpOn = air.instance.toggleHelp(true);
     }
   } catch (cause) {
     air.on = false;
@@ -1984,6 +2011,31 @@ $('input').addEventListener('input', () => {
 $('btn-mic').addEventListener('click', () => { if (!state.listening) startListening(); });
 $('btn-air').addEventListener('click', () => void toggleAir());
 $('btn-air-2').addEventListener('click', () => void toggleAir());
+$('btn-air-help').addEventListener('click', () => {
+  air.helpOn = air.instance?.toggleHelp() ?? false;
+  paintAir();
+});
+$('btn-air-dwell').addEventListener('click', () => {
+  const next = !(air.instance?.settings?.dwellEnabled === true);
+  air.instance?.setSetting('dwellEnabled', next);
+  // 出しているヘルプは、切り替えたその場で書き換わる（後で開き直させない）
+  if (air.helpOn) air.instance?.toggleHelp(true);
+  $('air-tune-note').textContent = next
+    ? '止めているだけで押されます。つまむのが難しいときに。'
+    : 'つまみ方には個人差があります。合わせると狙いが安定します。';
+  paintAir();
+});
+$('btn-air-dock').addEventListener('click', () => {
+  const next = air.instance?.settings?.dockSide === 'top' ? 'bottom' : 'top';
+  air.instance?.setSetting('dockSide', next);
+  paintAir();
+});
+$('btn-air-cal').addEventListener('click', () => {
+  if (!air.instance?.startCalibration()) return;
+  // 調整中は画面の案内（オーバーレイ）を見てもらう。設定シートは閉じる
+  $('air-tune-note').textContent = '画面の案内にしたがって、手を開く→つまむ の順に構えてください。';
+  openSheet(false);
+});
 // タブを閉じる・別ページへ移る時にカメラを止める（止め忘れ防止の最後の砦）
 window.addEventListener('pagehide', () => { air.instance?.disable(); });
 $('btn-settings').addEventListener('click', () => openSheet(true));

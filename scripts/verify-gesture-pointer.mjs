@@ -119,6 +119,12 @@ const HELPERS = `
     lm[4]  = { x: nx - 0.65 * d, y: ny, z: 0 };     // 親指の先
     return { landmarks: lm };
   };
+  /** 人差し指は開いたまま、中指だけを親指へ寄せた手（＝右クリックの構え） */
+  window.makeSecondaryHand = (nx, ny, secondary, scale = 0.15) => {
+    const hand = window.makeHand(nx, ny, 0.95, scale);
+    hand.landmarks[12] = { x: hand.landmarks[4].x + secondary * scale, y: ny, z: 0 };
+    return hand;
+  };
   window.VIEW = VIEW;
 `;
 await page.addScriptTag({ content: HELPERS, type: 'module' }).catch(() => {});
@@ -550,6 +556,340 @@ check('54. カメラの向きを必須条件にしていない（PCのWebカメ�
   !/exact\s*:\s*['"]?user/.test(moduleSource) && /facingMode,/.test(moduleSource));
 await desktop.screenshot({ path: path.join(ROOT, 'test-screenshots', 'zero-1-airtouch-desktop.png') });
 await desktop.close();
+
+/* ------------------------------------------------------------------ *
+ * ブラッシュアップ分（2026-09-06）— 狙いやすさ・疲れにくさ・できること・見え方
+ *
+ * ★どれも「例外もエラーも出ないまま効かない」種類の機能。
+ *   進み具合の表示は出ていなくても動くし、スクロールの加速は倍率1でも動く。
+ *   数字と実DOMへ届いたイベントで確かめる。
+ * ------------------------------------------------------------------ */
+const brush = await page.evaluate(async ([base]) => {
+  const M = await import(`${base}/assets/js/gesture-pointer.js`);
+  const out = {};
+  const view = { width: window.innerWidth, height: window.innerHeight };
+  const box = M.DEFAULTS.activeBox;
+  const toCam = (sx, sy) => ({
+    nx: 1 - (box.x0 + (sx / view.width) * (box.x1 - box.x0)),
+    ny: box.y0 + (sy / view.height) * (box.y1 - box.y0),
+  });
+
+  // ★前の検査で設定シートを開いたままだと、覆いが画面を塞いで elementFromPoint が
+  //   そちらを拾い、**何を押しても届かない**（例外は出ず、ログが空になるだけ）
+  document.getElementById('sheet')?.classList.add('hidden');
+  document.getElementById('backdrop')?.classList.add('hidden');
+  const panel = document.createElement('div');
+  panel.style.cssText = 'position:fixed; inset:0; z-index:2147482000';
+  panel.innerHTML = `
+    <button id="bx-a" style="position:absolute; left:20px; top:60px; width:150px; height:64px">A</button>
+    <div id="bx-scroll" style="position:absolute; left:0; top:300px; width:390px; height:220px; overflow-y:auto">
+      <div style="height:4000px"></div>
+    </div>`;
+  document.body.appendChild(panel);
+  const log = [];
+  for (const type of ['click', 'contextmenu']) {
+    document.getElementById('bx-a').addEventListener(type, (e) => { log.push(type); e.preventDefault(); });
+  }
+
+  const rect = document.getElementById('bx-a').getBoundingClientRect();
+  const AX = rect.left + rect.width / 2, AY = rect.top + rect.height / 2;
+
+  /* --- 進み具合（連続値）が判定層から作用層まで通っているか --- */
+  {
+    const engine = new M.GestureEngine();
+    const driver = new M.PointerDriver({ doc: document });
+    const at = (pinch, t) => {
+      const cam = toCam(AX, AY);
+      const frame = engine.update(window.makeHand(cam.nx, cam.ny, pinch), t, view);
+      driver.apply(frame);
+      return { progress: frame.progress, css: driver.cursor.style.getPropertyValue('--airtouch-progress') };
+    };
+    at(0.95, 0);
+    out.progressOpen = at(0.95, 40);
+    out.progressHalf = at(0.50, 80);
+    out.progressFull = at(0.20, 120);
+    driver.destroy();
+  }
+
+  /* --- 中指つまみ＝右クリック。普通のタップで誤爆しないこと --- */
+  {
+    const engine = new M.GestureEngine();
+    const driver = new M.PointerDriver({ doc: document });
+    const cam = toCam(AX, AY);
+    const feed = (hand, t) => driver.apply(engine.update(hand, t, view));
+    log.length = 0;
+    feed(window.makeSecondaryHand(cam.nx, cam.ny, 0.9), 0);
+    feed(window.makeSecondaryHand(cam.nx, cam.ny, 0.9), 40);
+    feed(window.makeSecondaryHand(cam.nx, cam.ny, 0.2), 80);
+    out.secondaryLog = [...log];
+    // 普通のタップ（人差し指つまみ）では出ないこと。★摘まむと中指も親指へ寄るので
+    //   中指だけを見ていると、押すたびに右クリックが出る
+    engine.reset(); log.length = 0;
+    feed(window.makeHand(cam.nx, cam.ny, 0.95), 200);
+    feed(window.makeHand(cam.nx, cam.ny, 0.20), 240);
+    feed(window.makeHand(cam.nx, cam.ny, 0.20), 320);
+    feed(window.makeHand(cam.nx, cam.ny, 0.95), 400);
+    out.tapLog = [...log];
+    driver.destroy();
+  }
+
+  /* --- スクロールの加速。同じ距離でも、速く払うほど多く進む --- */
+  {
+    const scroller = document.getElementById('bx-scroll');
+    const run = (intervalMs) => {
+      const engine = new M.GestureEngine();
+      const driver = new M.PointerDriver({ doc: document, reducedMotion: true });
+      scroller.scrollTop = 0;
+      let t = 0;
+      const step = (sy, pinch) => {
+        const cam = toCam(195, sy);
+        driver.apply(engine.update(window.makeHand(cam.nx, cam.ny, pinch), t, view));
+        t += intervalMs;
+      };
+      step(500, 0.95); step(500, 0.2);
+      for (let i = 1; i <= 5; i++) step(500 - i * 28, 0.2);
+      const moved = scroller.scrollTop;
+      driver.cancelInertia(); driver.destroy();
+      return moved;
+    };
+    out.panSlow = run(120);   // ゆっくり（約233px/秒）
+    out.panFast = run(20);    // 速く（約1400px/秒）
+  }
+
+  /* --- 静止クリック（既定OFF） --- */
+  {
+    out.dwellDefault = M.DEFAULTS.dwellEnabled;
+    const engine = new M.GestureEngine({ dwellEnabled: true });
+    const driver = new M.PointerDriver({ doc: document });
+    const cam = toCam(AX, AY);
+    log.length = 0;
+    let css = '';
+    for (let t = 0; t <= 1200; t += 100) {
+      const frame = engine.update(window.makeHand(cam.nx, cam.ny, 0.95), t, view);
+      driver.apply(frame);
+      if (t === 500) css = driver.cursor.style.getPropertyValue('--airtouch-dwell');
+    }
+    out.dwellClicks = log.filter((l) => l === 'click').length;
+    out.dwellCss = css;
+    // 動かし続けている間は押さない（読んでいるだけで押されると使い物にならない）
+    engine.reset(); log.length = 0;
+    for (let t = 0; t <= 1200; t += 100) {
+      const cam2 = toCam(AX + ((t / 100) % 2 ? 40 : -40), AY);
+      driver.apply(engine.update(window.makeHand(cam2.nx, cam2.ny, 0.95), t, view));
+    }
+    out.dwellMovingClicks = log.filter((l) => l === 'click').length;
+    driver.destroy();
+  }
+
+  /* --- 横払いで戻る（既定OFF） --- */
+  {
+    // ★本物の history を差し替える。偽の window を渡すと PointerEvent が作れず、
+    //   「戻るを試す前に検査が落ちる」だけになる（実際に踏んだ）
+    const realBack = window.history.back;
+    let backs = 0;
+    window.history.back = () => { backs++; };
+    const engine = new M.GestureEngine();
+    const flick = (driver) => {
+      engine.reset();
+      let t = 5000;
+      const step = (sx, pinch) => {
+        const c = toCam(sx, 500);
+        driver.apply(engine.update(window.makeHand(c.nx, c.ny, pinch), t, view));
+        t += 25;
+      };
+      step(80, 0.95); step(80, 0.2);
+      for (let i = 1; i <= 5; i++) step(80 + i * 40, 0.2);
+      step(300, 0.95);
+    };
+    const off = new M.PointerDriver({ doc: document, reducedMotion: true });
+    flick(off); out.navOffBacks = backs; off.cancelInertia(); off.destroy();
+    backs = 0;
+    const on = new M.PointerDriver({ doc: document, reducedMotion: true, navigateOnSwipe: true });
+    flick(on); out.navOnBacks = backs; on.cancelInertia(); on.destroy();
+    window.history.back = realBack;
+  }
+
+  /* --- できることの一覧・表示位置 --- */
+  {
+    const driver = new M.PointerDriver({ doc: document });
+    out.helpHiddenAtStart = driver.help.hidden;
+    driver.setHelp(M.helpText({ dwellEnabled: false }));
+    out.helpShown = !driver.help.hidden;
+    out.helpNoDwell = !driver.help.textContent.includes('止めて待つ');
+    driver.setHelp(M.helpText({ dwellEnabled: true }));
+    out.helpWithDwell = driver.help.textContent.includes('止めて待つ');
+    out.dockDefault = getComputedStyle(driver.dock).bottom;
+    driver.setDockSide('top');
+    out.dockTop = driver.dock.classList.contains('is-top');
+    out.dockTopStyle = getComputedStyle(driver.dock).top;
+    driver.destroy();
+  }
+
+  panel.remove();
+  return out;
+}, [BASE]);
+
+check('55. つまみ具合が連続値で出る（あと少しなのか、まるで足りないのかが見える）',
+  brush.progressOpen.progress === 0 && Math.abs(brush.progressHalf.progress - 0.5) < 0.01 && brush.progressFull.progress === 1,
+  `${brush.progressOpen.progress} / ${brush.progressHalf.progress?.toFixed(2)} / ${brush.progressFull.progress}`);
+check('56. 進み具合がカーソルまで届いている（判定層で作って作用層で捨てていない）',
+  Math.abs(Number(brush.progressHalf.css) - 0.5) < 0.01, brush.progressHalf.css);
+check('57. 中指つまみで contextmenu が届く（同じ手のまま右クリック）',
+  brush.secondaryLog.includes('contextmenu'), brush.secondaryLog.join(','));
+check('58. 普通のタップでは contextmenu を出さない（摘まむと中指も親指へ寄る）',
+  !brush.tapLog.includes('contextmenu') && brush.tapLog.includes('click'), brush.tapLog.join(','));
+check('59. 速く払うほどスクロールが伸びる（長い記事で腕が何往復も要らない）',
+  brush.panFast > brush.panSlow * 1.5, `ゆっくり ${brush.panSlow}px → 速く ${brush.panFast}px`);
+check('60. ゆっくりのときは指の動きと1:1のまま（狙いが狂わない）',
+  brush.panSlow > 100 && brush.panSlow < 190, `${brush.panSlow}px（実移動 140px）`);
+check('61. 静止クリックは既定OFF（止めているだけで押されるのは誤爆する）',
+  brush.dwellDefault === false);
+check('62. ONにすると、止め続けるだけでタップが届く', brush.dwellClicks === 1, `${brush.dwellClicks}回`);
+check('63. 静止クリックの進み具合がカーソルに出る（いつ押されるか分かる）',
+  Number(brush.dwellCss) > 0.2 && Number(brush.dwellCss) < 1, brush.dwellCss);
+check('64. 動かしている間は静止クリックしない（読んでいるだけで押されない）',
+  brush.dwellMovingClicks === 0, `${brush.dwellMovingClicks}回`);
+check('65. 横払いで戻るは既定OFF（書きかけの入力が消えない）', brush.navOffBacks === 0, `${brush.navOffBacks}回`);
+check('66. ONにすると右へ払って前のページへ戻れる', brush.navOnBacks === 1, `${brush.navOnBacks}回`);
+check('67. できることの一覧は最初は出ていない（画面を塞がない）', brush.helpHiddenAtStart === true);
+check('68. 切ってある操作は一覧に載せない（試して反応しない＝壊れている、になる）',
+  brush.helpShown && brush.helpNoDwell && brush.helpWithDwell);
+check('69. 表示（プレビュー・案内）を上へ逃がせる',
+  brush.dockTop && brush.dockTopStyle !== 'auto', `${brush.dockDefault} → top:${brush.dockTopStyle}`);
+
+/* --- 調整（つまみ方の個人差）と、設定の保存 --------------------------- */
+const calib = await page.evaluate(async ([base]) => {
+  const M = await import(`${base}/assets/js/gesture-pointer.js`);
+  const out = {};
+  const view = { width: window.innerWidth, height: window.innerHeight };
+  const box = M.DEFAULTS.activeBox;
+  const button = document.createElement('button');
+  document.getElementById('sheet')?.classList.add('hidden');
+  document.getElementById('backdrop')?.classList.add('hidden');
+  button.style.cssText = 'position:fixed; left:20px; top:60px; width:150px; height:64px; z-index:2147482000';
+  document.body.appendChild(button);
+  // ★クリックだけを数えても意味がない。調整中は指を離さないので click は元々起きず、
+  //   押下を素通しに戻しても検査が通ってしまう（故障注入で実際にすり抜けた）。
+  //   押し始め（pointerdown / mousedown）まで届いていないことを見る
+  let presses = 0;
+  for (const type of ['pointerdown', 'mousedown', 'click']) {
+    button.addEventListener(type, () => { presses++; });
+  }
+  const rect = button.getBoundingClientRect();
+  const cam = {
+    nx: 1 - (box.x0 + ((rect.left + rect.width / 2) / view.width) * (box.x1 - box.x0)),
+    ny: box.y0 + ((rect.top + rect.height / 2) / view.height) * (box.y1 - box.y0),
+  };
+
+  const memory = () => {
+    const store = { raw: null };
+    return { store, getItem: () => store.raw, setItem: (k, v) => { store.raw = v; } };
+  };
+  /** 調整を最後まで回す。open→closed の順に構えを変える */
+  const run = async (openPinch, closedPinch, storage) => {
+    let pinch = openPinch;
+    const air = new M.AirTouch({
+      createSource: () => ({ video: null, async start() {}, poll: () => window.makeHand(cam.nx, cam.ny, pinch), stop() {} }),
+      preview: false, storage,
+    });
+    await air.enable();
+    air.startCalibration();
+    for (let t = 0; t <= 6000; t += 50) {
+      // 2つ目の段階（つまむ）へ進んだら構えを変える
+      pinch = air.calibration?.phase === 'closed' ? closedPinch : openPinch;
+      air.tick(t);
+      if (!air.calibration) break;
+    }
+    const result = { settings: { ...air.settings }, hint: air.driver?.hint.textContent ?? '' };
+    air.disable();
+    return result;
+  };
+
+  const good = memory();
+  const okRun = await run(0.95, 0.15, good);
+  out.calibrated = okRun.settings;
+  out.calibratedHint = okRun.hint;
+  out.calibratedPresses = presses;        // 調整中に押されていないこと
+  out.stored = good.store.raw;
+
+  const bad = memory();
+  const badRun = await run(0.5, 0.45, bad);   // 開きとつまみの差が小さすぎる
+  out.badSettings = badRun.settings;
+  out.badHint = badRun.hint;
+  out.badStored = bad.store.raw;
+
+  // 保存済みの閾値が次回の既定になるか
+  const reuse = new M.AirTouch({
+    createSource: () => ({ video: null, async start() {}, poll: () => null, stop() {} }),
+    preview: false, storage: good,
+  });
+  out.reused = { down: reuse.engineOptions.pinchDown, up: reuse.engineOptions.pinchUp };
+
+  // 上下が逆に保存されていたら捨てる（逆のままだと押下が一度も成立しない）
+  const broken = { getItem: () => JSON.stringify({ pinchDown: 0.8, pinchUp: 0.2, dwellEnabled: true }), setItem() {} };
+  out.brokenLoaded = M.loadSettings(broken);
+
+  button.remove();
+  return out;
+}, [BASE]);
+
+check('70. 調整（開く→つまむ）で自分用の閾値ができる',
+  Number.isFinite(calib.calibrated.pinchDown) && calib.calibrated.pinchUp > calib.calibrated.pinchDown,
+  `${calib.calibrated.pinchDown?.toFixed(2)}〜${calib.calibrated.pinchUp?.toFixed(2)}`);
+check('71. 調整中は押下が実DOMへ通らない（調整のたびに画面が動かない）',
+  calib.calibratedPresses === 0, `${calib.calibratedPresses}回`);
+check('72. 調整の結果が保存され、次に開いたときの既定になる',
+  Math.abs(calib.reused.down - calib.calibrated.pinchDown) < 1e-9
+  && Math.abs(calib.reused.up - calib.calibrated.pinchUp) < 1e-9,
+  `${JSON.stringify(calib.reused)} / 保存 ${calib.stored?.slice(0, 60)}`);
+check('73. 区別のつかない構えでは閾値を作らない（前より当たらなくなるのを防ぐ）',
+  calib.badSettings.pinchDown === undefined && calib.badStored === null, JSON.stringify(calib.badSettings));
+check('74. 調整できなくても、これまでの設定のまま使えると伝える',
+  /そのまま使えます|まま使えます/.test(calib.badHint), calib.badHint.slice(0, 60));
+check('75. 壊れた保存値（上下が逆）は捨てる（押下が一度も成立しなくなる）',
+  calib.brokenLoaded.pinchDown === undefined && calib.brokenLoaded.dwellEnabled === true,
+  JSON.stringify(calib.brokenLoaded));
+
+/* --- ページ側の配線（細かい設定） ------------------------------------- */
+const tuning = await page.evaluate(async () => {
+  window.__AIRTOUCH_SOURCE_FACTORY = () => ({
+    video: null, async start() {}, poll() { return null; }, stop() {},
+  });
+  const before = document.getElementById('air-options').hidden;
+  document.getElementById('btn-air').click();
+  for (let i = 0; i < 60 && !window.ZERO1_AIRTOUCH?.on; i++) await new Promise((r) => setTimeout(r, 50));
+  const shown = document.getElementById('air-options').hidden === false;
+  const helpAtStart = document.querySelector('.airtouch-help')?.hidden === false;
+  document.getElementById('btn-air-dwell').click();
+  const dwell = { pressed: document.getElementById('btn-air-dwell').getAttribute('aria-pressed'),
+    setting: window.ZERO1_AIRTOUCH.instance?.settings?.dwellEnabled,
+    engine: window.ZERO1_AIRTOUCH.instance?.engine?.options?.dwellEnabled,
+    help: document.querySelector('.airtouch-help')?.textContent ?? '' };
+  document.getElementById('btn-air-dock').click();
+  const dock = document.querySelector('.airtouch-dock')?.classList.contains('is-top');
+  document.getElementById('btn-air-help').click();
+  const helpOff = document.querySelector('.airtouch-help')?.hidden === true;
+  document.getElementById('btn-air-cal').click();
+  const calibrating = Boolean(window.ZERO1_AIRTOUCH.instance?.calibration);
+  const sheetClosed = document.getElementById('sheet').classList.contains('hidden');
+  window.ZERO1_AIRTOUCH.instance?.cancelCalibration();
+  document.getElementById('btn-air-2').click();
+  for (let i = 0; i < 60 && window.ZERO1_AIRTOUCH?.on; i++) await new Promise((r) => setTimeout(r, 50));
+  return { before, shown, helpAtStart, dwell, dock, helpOff, calibrating, sheetClosed,
+    hiddenAfterOff: document.getElementById('air-options').hidden };
+});
+check('76. 細かい設定は動いている間だけ出す（押しても効かないボタンを並べない）',
+  tuning.before === true && tuning.shown === true && tuning.hiddenAfterOff === true, JSON.stringify(tuning));
+check('77. 起動したら「できること」を一度出す（何ができるか分からないと使われない）',
+  tuning.helpAtStart === true);
+check('78. 静止クリックの入切が、動いたまま判定層まで届く',
+  tuning.dwell.pressed === 'true' && tuning.dwell.setting === true && tuning.dwell.engine === true,
+  JSON.stringify(tuning.dwell).slice(0, 90));
+check('79. 切り替えた内容が、出したままの一覧にその場で反映される',
+  tuning.dwell.help.includes('止めて待つ'));
+check('80. 表示の位置を切り替えられる／一覧を閉じられる', tuning.dock === true && tuning.helpOff === true);
+check('81. 調整を始めると設定シートを閉じて画面の案内へ渡す',
+  tuning.calibrating === true && tuning.sheetClosed === true);
 
 const shots = path.join(ROOT, 'test-screenshots');
 fs.mkdirSync(shots, { recursive: true });

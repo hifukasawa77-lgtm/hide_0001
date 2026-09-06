@@ -48,9 +48,29 @@ function serve(root) {
 async function checkPage(browser, port, file, waitMs) {
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   const missing = new Set();
+  const external = new Set();   // 別オリジン（CDN・Webフォント）の失敗はFAILにしない
   const errors = [];
-  page.on('response', r => { if (r.status() === 404) missing.add(new URL(r.url()).pathname); });
-  page.on('requestfailed', r => missing.add(new URL(r.url()).pathname + ' (' + (r.failure()?.errorText || 'failed') + ')'));
+  // このリポジトリの資産（同一オリジン＝一時サーバ）だけをFAIL対象にする。
+  // CDNやWebフォントは回線・地域・社内プロキシで落ちる。混ぜると「本物の404」が
+  // 環境由来の赤に埋もれ、やがて検査ごと無視されるようになる（dynamic-test-auto.cjs と同じ設計）。
+  const isLocal = url => { try { return new URL(url).port === String(port); } catch { return false; } };
+  const label = url => { try { const u = new URL(url); return u.host + u.pathname; } catch { return url; } };
+  page.on('response', r => {
+    if (r.status() !== 404) return;
+    if (isLocal(r.url())) missing.add(new URL(r.url()).pathname);
+    else external.add(label(r.url()) + ' (404)');
+  });
+  page.on('requestfailed', r => {
+    const reason = r.failure()?.errorText || 'failed';
+    if (!isLocal(r.url())) { external.add(label(r.url()) + ' (' + reason + ')'); return; }
+    const rel = decodeURIComponent(new URL(r.url()).pathname).replace(/^\/+/, '');
+    // 検査自身のクリック・Enterがリンクを踏むと遷移が始まり、検査の終了で中断される。
+    // 実体が在るのに ERR_ABORTED で「404」と報告されていた（card-games.html → poker.html）。
+    // 中断はページの欠陥ではないので、**実体が在るときだけ**除外する。
+    // 実在しないファイルの中断は従来どおりFAIL（これを緩めると本物の欠落を見逃す）。
+    if (reason.includes('ERR_ABORTED') && fs.existsSync(path.join(ROOT, rel))) return;
+    missing.add(new URL(r.url()).pathname + ' (' + reason + ')');
+  });
   page.on('pageerror', e => errors.push(String(e).split('\n')[0]));
   try {
     await page.goto(`http://127.0.0.1:${port}/${file}`, { waitUntil: 'domcontentloaded', timeout: 60000 });
@@ -64,7 +84,7 @@ async function checkPage(browser, port, file, waitMs) {
     errors.push('goto: ' + e.message);
   }
   await page.close();
-  return { file, missing: [...missing], errors };
+  return { file, missing: [...missing], external: [...external], errors };
 }
 
 // 静的チェック: コード中の画像参照が、実在するファイルを指しているか。
@@ -78,6 +98,18 @@ function checkStaticRefs() {
     'gamekit/gamekit.js', 'tracker-blocker/', 'node_modules', '.git'];
   const assetRoots = fs.readdirSync(path.join(ROOT, 'assets'), { withFileTypes: true })
     .filter(e => e.isDirectory()).map(e => path.join(ROOT, 'assets', e.name));
+  // 実行時に組み立てるパス（`HEX_BATTLE_ROOT + 'backgrounds/01-x.webp'` 等）は、参照文字列だけ見ても
+  // 解決できない。assets 直下1階層を候補にするだけでは足りず、2階層以上のルートを持つゲーム
+  // （assets/genpei/hex-battles/）が丸ごと「実在しない」と誤報された。ルートを推測で広げると
+  // 今度は誤った場所で解決して本物の間違いを見逃すので、**そのファイル自身が宣言している**
+  // 'assets/.../' という文字列だけを、そのファイルの解決先に加える。
+  const declaredRoots = text => {
+    const roots = new Set();
+    const re = /["'`](assets\/[A-Za-z0-9_\-./]*\/)["'`]/g;
+    let m;
+    while ((m = re.exec(text))) roots.add(path.join(ROOT, m[1]));
+    return [...roots];
+  };
   const bad = [];
   const walk = dir => {
     for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -87,6 +119,7 @@ function checkStaticRefs() {
       if (e.isDirectory()) { walk(p); continue; }
       if (!CODE.has(path.extname(e.name).toLowerCase())) continue;
       let text; try { text = fs.readFileSync(p, 'utf8'); } catch { continue; }
+      const fileRoots = declaredRoots(text);
       const re = /["'`]([A-Za-z0-9_\-./]+\.(?:webp|png|jpe?g))["'`]/g;
       let m;
       while ((m = re.exec(text))) {
@@ -99,6 +132,7 @@ function checkStaticRefs() {
           path.join(path.dirname(p), ref),
           path.join(ROOT, 'assets', ref),
           ...assetRoots.map(r => path.join(r, ref)),
+          ...fileRoots.map(r => path.join(r, ref)),
         ];
         if (!cands.some(c => fs.existsSync(c))) bad.push(`${rel}: ${ref}`);
       }
@@ -134,10 +168,13 @@ async function main() {
     const r = await checkPage(browser, port, f, waitMs);
     const n = r.missing.length + r.errors.length;
     bad += n;
-    console.log(`${n ? '[FAIL]' : '[ ok ]'} ${f.padEnd(30)} 404:${String(r.missing.length).padStart(3)}  例外:${r.errors.length}`);
+    const ext = r.external.length ? `  外部:${r.external.length}` : '';
+    console.log(`${n ? '[FAIL]' : '[ ok ]'} ${f.padEnd(30)} 404:${String(r.missing.length).padStart(3)}  例外:${r.errors.length}${ext}`);
     r.missing.slice(0, 8).forEach(m => console.log('        ✗ 404 ' + m));
     if (r.missing.length > 8) console.log(`        … 他 ${r.missing.length - 8}件`);
     r.errors.slice(0, 3).forEach(m => console.log('        ✗ ' + m));
+    // 別オリジンはFAILにしないが、黙って捨てると「CDNが落ちている」に気づけないので参考表示する
+    r.external.slice(0, 3).forEach(m => console.log('        △ 外部 ' + m));
   }
   await browser.close(); server.close();
   console.log(bad ? `\n[FAIL] 合計 ${bad}件` : '\n[PASS] 404・例外ともに0件');

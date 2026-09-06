@@ -34,9 +34,9 @@ const CARDS = [
     sub: 'AI対戦つき / Play against AI',
     items: ['将棋・囲碁・チェス', '麻雀・花札・百人一首', 'バックギャモン・オセロ', 'トランプゲーム集'],
     accent: '#22d3ee' },
-  { file: 'ig-04-team.jpg', kicker: 'AI TEAM', title: 'AIエージェント<br>19体で作る。',
+  { file: 'ig-04-team.jpg', kicker: 'AI TEAM', title: 'AIエージェント<br>22体で作る。',
     sub: '企画から品質ゲート、リリースまで / Plan → gates → release',
-    items: ['企画・制作 5体', '品質ゲート 5体', 'リリース 2体', '公開後の改善 4体 ほか'],
+    items: ['企画・制作 5体', '品質ゲート 6体', '公開後の改善 4体', '切り分け・検査 2体 ほか'],
     accent: '#a78bfa' },
 ];
 

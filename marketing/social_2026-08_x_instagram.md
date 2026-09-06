@@ -13,13 +13,13 @@
 - 公開ゲーム **37本**（ボード20／シミュレーション6／アクション4／パズル3／RPG2／カード1／その他1）
 - 全てブラウザ完結・インストール不要・無料
 - 素のHTML/CSS/JavaScript（Canvas API）のみ。フレームワーク・ビルドツール不使用
-- Claude AI とのペアプログラミングで制作。19体のAIエージェントによる開発パイプラインを公開中
+- Claude AI とのペアプログラミングで制作。22体のAIエージェントによる開発パイプラインを公開中
 
 ## USP（この3点だけを繰り返し言う）
 
 1. **歴史SLGが4本**（三国志・戦国・源平・南北朝）— 個人開発でこの density は珍しい
 2. **フレームワークゼロ** — ライブラリ無しでヘックス戦・AI思考・Web Audio まで実装
-3. **AIチームで作っている** — 19体のエージェント（企画〜品質ゲート〜リリース）を公開している
+3. **AIチームで作っている** — 22体のエージェント（企画〜品質ゲート〜リリース）を公開している
 
 ---
 
@@ -56,9 +56,9 @@ https://hifukasawa77-lgtm.github.io/main/
 
 ### JA-3 — AIチーム訴求（差別化が一番効く）
 ```
-ゲーム開発をAIエージェント19体のチームでやっています。
+ゲーム開発をAIエージェント22体のチームでやっています。
 
-企画→アセット制作→実装→品質ゲート（法務／脆弱性／日英表記）→動的テスト→採点→リリース。
+企画→アセット制作→実装→品質ゲート（法務／脆弱性／日英表記／アセット）→動的テスト→採点→リリース。
 このパイプラインごとサイトで公開しました。
 
 https://hifukasawa77-lgtm.github.io/main/agents.html
@@ -93,7 +93,7 @@ https://hifukasawa77-lgtm.github.io/main/
 
 ### EN-2 — AI team angle
 ```
-My game studio is 19 AI agents.
+My game studio is 22 AI agents.
 
 Planning → assets → code → quality gates (legal / security / i18n) → runtime tests → scoring → release.
 I published the whole pipeline:
@@ -124,7 +124,7 @@ https://hifukasawa77-lgtm.github.io/main/
 - `ig-01-hero.jpg` — 37本・インストール不要
 - `ig-02-strategy.jpg` — 歴史SLG 4本
 - `ig-03-board.jpg` — ボードゲーム20本
-- `ig-04-team.jpg` — AIエージェント19体
+- `ig-04-team.jpg` — AIエージェント22体
 
 ## IG-1 — カルーセル本命（日英併記）
 
@@ -137,14 +137,14 @@ https://hifukasawa77-lgtm.github.io/main/
 
 すべてインストール不要。ライブラリもフレームワークも使わず、素のJavaScriptとCanvas APIだけで作りました。
 
-開発はAIエージェント19体のチーム制。企画から品質チェック、リリースまでの流れもサイトで公開しています。
+開発はAIエージェント22体のチーム制。企画から品質チェック、リリースまでの流れもサイトで公開しています。
 
 プロフィールのリンクから遊べます👆
 
 —
 37 free browser games, no install required.
 Built with vanilla JavaScript and the Canvas API — zero frameworks.
-Developed by a team of 19 AI agents.
+Developed by a team of 22 AI agents.
 
 #個人開発 #ブラウザゲーム #無料ゲーム #ゲーム制作 #JavaScript #CanvasAPI #AI駆動開発 #indiedev #gamedev #browsergames #retrogaming #将棋 #麻雀 #シミュレーションゲーム #プログラミング
 ```
@@ -170,9 +170,9 @@ A historical strategy game where you fight for legitimacy, not just troops.
 ## IG-3 — AIチーム（ストーリーズ/リール向け）
 
 ```
-ゲームを作っているのは、19体のAIエージェントのチームです🤖
+ゲームを作っているのは、22体のAIエージェントのチームです🤖
 
-プランナーが仕様を書き、デザイナーが絵を作り、コードジェネレーターが実装し、法務・セキュリティ・多言語の3体が並列でチェック。テスターが実際にブラウザで動かして、エバリュエーターが100点満点で採点。80点未満はやり直しです。
+プランナーが仕様を書き、デザイナーが絵を作り、コードジェネレーターが実装し、法務・セキュリティ・多言語・アセットの4体が並列でチェック。テスターが実際にブラウザで動かして、エバリュエーターが100点満点で採点。80点未満はやり直しです。
 
 このチーム表もサイトで公開しています。
 

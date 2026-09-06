@@ -333,6 +333,94 @@ else
   echo "  - python3なし（スキップ）"
 fi
 
+
+echo "== 14. エージェント定義 ⇄ 共通運用規約（.claude/agent-conventions.md）の適合 =="
+# 目的: 「規約を書いたが誰も従っていない」状態を機械検出する。
+# 権限（tools）未指定・契約/停止条件の欠落・存在しない検査コマンドや旧ファイル名の参照を洗う。
+if command -v python3 >/dev/null 2>&1; then
+  AC=$(python3 - <<'PYEOF14'
+import os, re, glob
+out = []
+CONV = '.claude/agent-conventions.md'
+if not os.path.exists(CONV):
+    print('FAIL:%s が無い（全エージェントの共通運用規約の正本）' % CONV)
+    raise SystemExit
+conv = open(CONV, encoding='utf-8').read()
+
+# MCPコネクタが要るため tools を絞らないエージェント（理由を定義本文に書くこと）
+TOOLS_EXEMPT = {'graphic-designer', 'pmo'}
+
+names = sorted(os.path.basename(p)[:-3] for p in glob.glob('.claude/agents/*.md'))
+html_pages = {os.path.basename(p) for p in glob.glob('*.html')}
+
+for n in names:
+    body = open('.claude/agents/%s.md' % n, encoding='utf-8').read()
+    m = re.match(r'^---\n(.*?)\n---\n', body, re.S)
+    if not m:
+        out.append('FAIL:%s: frontmatter が無い' % n); continue
+    fm = m.group(1)
+    # (a) 最小権限の宣言
+    has_tools = re.search(r'^tools:', fm, re.M) is not None
+    if not has_tools and n not in TOOLS_EXEMPT:
+        out.append('FAIL:%s: frontmatter に tools: が無い（未指定＝全ツール付与。規約§2）' % n)
+    if not has_tools and n in TOOLS_EXEMPT and '権限について' not in body:
+        out.append('WARN:%s: tools: を絞らない理由が本文に書かれていない（規約§2）' % n)
+    # (b) 契約・停止条件・共通規約への参照
+    if '## 契約' not in body:
+        out.append('FAIL:%s: 「## 契約」節が無い（受け取る/返す/次の担当。規約§1）' % n)
+    else:
+        for kw in ('受け取る', '返す'):
+            if kw not in body:
+                out.append('FAIL:%s: 契約に「%s」が無い' % (n, kw))
+    if '停止条件' not in body:
+        out.append('FAIL:%s: 「停止条件」節が無い（規約§5）' % n)
+    if 'agent-conventions.md' not in body:
+        out.append('FAIL:%s: 共通運用規約（.claude/agent-conventions.md）を参照していない' % n)
+    # (c) 参照している検査スクリプトが実在するか
+    for sc in set(re.findall(r'(scripts/[A-Za-z0-9_.-]+\.(?:mjs|cjs|js|py))', body)):
+        if not os.path.exists(sc):
+            out.append('FAIL:%s: 存在しない検査スクリプトを参照 → %s' % (n, sc))
+    for sk in set(re.findall(r'(\.claude/skills/[A-Za-z0-9_./-]+\.(?:sh|cjs|mjs))', body)):
+        if not os.path.exists(sk):
+            out.append('FAIL:%s: 存在しないスキルスクリプトを参照 → %s' % (n, sk))
+    # (d) 実在しないHTMLページ名の参照（改称の取りこぼし。例: game.html → zelda_like.html）
+    for pg in set(re.findall(r'`([a-z0-9_-]+\.html)`', body)):
+        if pg not in html_pages:
+            out.append('FAIL:%s: 実在しないページを参照 → %s（改称の取りこぼし）' % (n, pg))
+
+# (e) 規約§4の対応表が参照する検査コマンドの実体
+for sc in set(re.findall(r'(scripts/[A-Za-z0-9_.-]+\.(?:mjs|cjs|js|py))', conv)):
+    if not os.path.exists(sc):
+        out.append('FAIL:agent-conventions: 対応表が存在しないスクリプトを参照 → %s' % sc)
+for sk in set(re.findall(r'(\.claude/skills/[A-Za-z0-9_./-]+\.(?:sh|cjs|mjs))', conv)):
+    if not os.path.exists(sk):
+        out.append('FAIL:agent-conventions: 対応表が存在しないスクリプトを参照 → %s' % sk)
+# (f) 規約が挙げるエージェント名が実在するか（振り分け表・一覧の腐り防止）
+for ref in set(re.findall(r'`([a-z][a-z0-9-]+)`', conv)):
+    if ref.endswith('-agent') or ref in ('planner','researcher','evaluator','release','marketer','optimizer',
+                                          'refactoring','security','triage','verifier','pmo','i18n','asset-guardian',
+                                          'code-generator','graphic-designer','music-generator','legal-checker',
+                                          'dynamic-tester','game-balance','english-teacher'):
+        if ref not in names:
+            out.append('FAIL:agent-conventions: 実在しないエージェントを参照 → %s' % ref)
+print('\n'.join(out))
+PYEOF14
+)
+  if [ -z "$AC" ]; then
+    ok "全エージェントが共通運用規約（tools宣言・契約・停止条件・参照の実在）に適合"
+  else
+    while IFS= read -r l; do
+      [ -z "$l" ] && continue
+      case "$l" in
+        FAIL:*) note_fail "${l#FAIL:}" ;;
+        WARN:*) note_warn "${l#WARN:}" ;;
+      esac
+    done <<< "$AC"
+  fi
+else
+  echo "  - python3なし（スキップ）"
+fi
+
 echo ""
 if [ "$FAIL" = 0 ]; then
   if [ "$WARN" = 0 ]; then

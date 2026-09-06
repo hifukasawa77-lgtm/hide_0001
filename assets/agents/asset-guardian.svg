@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 280">
+<defs>
+  <radialGradient id="g" cx="50%" cy="38%" r="52%">
+    <stop offset="0%" stop-color="#5eead4" stop-opacity="0.3"/>
+    <stop offset="100%" stop-color="#5eead4" stop-opacity="0"/>
+  </radialGradient>
+</defs>
+
+<ellipse cx="100" cy="108" rx="90" ry="105" fill="url(#g)"/>
+
+<!-- Body -->
+<path d="M38,280 Q44,234 68,220 Q83,212 100,210 Q117,212 132,220 Q156,234 162,280 Z" fill="#12303a"/>
+<path d="M68,220 Q66,205 73,194 Q80,184 90,182 L92,210 Q81,215 68,220 Z" fill="#1b4552"/>
+<path d="M132,220 Q134,205 127,194 Q120,184 110,182 L108,210 Q119,215 132,220 Z" fill="#1b4552"/>
+<path d="M92,210 Q88,225 90,260 L110,260 Q112,225 108,210 Q100,218 92,210 Z" fill="#e6fffb"/>
+<path d="M80,206 Q100,222 120,206 Q118,228 100,232 Q82,228 80,206 Z" fill="#5eead4" opacity="0.85"/>
+
+<!-- Props -->
+<!-- 額縁（アセット） -->
+<rect x="16" y="216" width="60" height="48" rx="6" fill="#0b2028" stroke="#5eead4" stroke-width="2.5"/>
+<rect x="23" y="223" width="46" height="34" rx="3" fill="#164e63"/>
+<path d="M23,251 L38,234 L48,246 L57,236 L69,251 Z" fill="#5eead4" opacity="0.85"/>
+<circle cx="59" cy="231" r="4" fill="#a7f3d0"/>
+<text x="46" y="272" font-family="sans-serif" font-size="11" font-weight="bold" fill="#5eead4" text-anchor="middle">WebP</text>
+<!-- 盾 -->
+<path d="M128,220 L172,220 L172,246 Q172,266 150,276 Q128,266 128,246 Z" fill="#0b2028" stroke="#5eead4" stroke-width="2.5"/>
+<path d="M139,244 L147,253 L162,235" stroke="#5eead4" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+<!-- Neck -->
+<rect x="88" y="188" width="24" height="26" rx="7" fill="#FDDCB5"/>
+
+<!-- Hair -->
+<path d="M54,180 Q46,86 100,70 Q154,86 146,180 Q140,132 100,130 Q60,132 54,180 Z" fill="#132a33"/>
+<path d="M54,168 Q52,190 60,196 Q64,182 60,166 Z" fill="#132a33"/>
+<path d="M146,168 Q148,190 140,196 Q136,182 140,166 Z" fill="#132a33"/>
+<path d="M64,112 Q88,94 126,104" stroke="#1f4a55" stroke-width="6" fill="none" stroke-linecap="round"/>
+
+<!-- Ears -->
+<ellipse cx="58" cy="150" rx="8" ry="11" fill="#FDDCB5"/>
+<ellipse cx="142" cy="150" rx="8" ry="11" fill="#FDDCB5"/>
+<ellipse cx="58" cy="150" rx="4" ry="7" fill="#e8a87c" opacity="0.55"/>
+<ellipse cx="142" cy="150" rx="4" ry="7" fill="#e8a87c" opacity="0.55"/>
+
+<!-- Face -->
+<ellipse cx="100" cy="150" rx="42" ry="50" fill="#FDDCB5"/>
+
+<!-- Eyes -->
+<ellipse cx="80" cy="144" rx="11.5" ry="9.5" fill="#faf4e8"/>
+<ellipse cx="80" cy="145" rx="7" ry="7" fill="#0f766e"/>
+<ellipse cx="80" cy="145" rx="3.8" ry="3.8" fill="#0d0d0d"/>
+<ellipse cx="83" cy="141.5" rx="2.5" ry="2" fill="white" opacity="0.9"/>
+<ellipse cx="120" cy="144" rx="11.5" ry="9.5" fill="#faf4e8"/>
+<ellipse cx="120" cy="145" rx="7" ry="7" fill="#0f766e"/>
+<ellipse cx="120" cy="145" rx="3.8" ry="3.8" fill="#0d0d0d"/>
+<ellipse cx="123" cy="141.5" rx="2.5" ry="2" fill="white" opacity="0.9"/>
+
+<!-- Eyebrows -->
+<path d="M69,129 Q80,124 91,128" stroke="#132a33" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+<path d="M109,128 Q120,124 131,129" stroke="#132a33" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+
+<!-- Nose -->
+<path d="M97,163 Q100,168 103,163" stroke="#c47850" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+
+<!-- Mouth -->
+<path d="M88,175 Q100,183 112,175" stroke="#b06050" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+
+</svg>

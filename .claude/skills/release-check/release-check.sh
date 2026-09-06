@@ -53,6 +53,21 @@ try:
 except Exception:
     changed = []
 files = [f for f in (x.strip() for x in changed) if f.endswith('.html') and os.path.isfile(f)]
+
+# 変更ファイルだけ見ても「他ページと食い違っている」ことは分からないので、
+# リポジトリ全体の URL → {integrity: {ページ}} を先に作る
+import glob
+ALL_INTEGRITY = {}
+for g in glob.glob('*.html'):
+    try:
+        h = open(g, encoding='utf-8', errors='replace').read()
+    except OSError:
+        continue
+    for t in re.findall(r'<script\b[^>]*>', h, re.S):
+        mu = re.search(r'src="(https://[^"]+)"', t)
+        mi = re.search(r'integrity="([^"]+)"', t)
+        if mu and mi and g not in files:
+            ALL_INTEGRITY.setdefault(mu.group(1), {}).setdefault(mi.group(1), set()).add(g)
 out = []
 if not files:
     print('OK:変更HTMLなし')
@@ -82,6 +97,16 @@ else:
                     if len(raw) != need:
                         out.append('FAIL:%s: integrity の長さが不正（%s は %dバイト必須・実際 %dバイト）→ %s'
                                    % (f, algo, need, len(raw), url))
+            # 同じURLなら同じファイル＝同じハッシュのはず。割れていたら少なくとも片方は必ずブロックされる
+            # （2026-09-06: shogi_rpg.html の react/react-dom が gradius-1.html と違う値を持ち、
+            #   将棋RPGは本番で React is not defined のまま動いていなかった）
+            if integ:
+                others = ALL_INTEGRITY.get(url, {})
+                for h, fs2 in others.items():
+                    if h != integ.group(1):
+                        out.append('FAIL:%s: 同じURLなのに他ページと integrity が違う（%s と不一致・'
+                                   '片方は必ずブロックされる）→ %s' % (f, ', '.join(sorted(fs2)[:2]), url))
+                        break
             # 版未固定 + integrity は「更新された瞬間に無言でブロック」になる組み合わせ
             if PINNED_CDN.match(url):
                 path = re.sub(r'^https://[^/]+/', '', url)

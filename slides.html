@@ -41,7 +41,9 @@
       transition: opacity 0.5s ease;
       background: var(--bg);
       border:1px solid var(--border);
-      padding: 50px 70px;
+      /* 下部はページ送り（.slide-dots bottom:68px / .slide-controls bottom:20px）が
+         viewport固定で重なるため、本文が潜り込まないだけの余白を確保する */
+      padding: 50px 70px 96px;
       box-sizing: border-box;
       overflow:hidden;
     }
@@ -342,38 +344,44 @@
       </div>
     </div>
 
-    <!-- スライド8: 僕の4エージェント構成 -->
+    <!-- スライド8: 僕の22エージェント構成 -->
     <div class="slide" data-index="7">
       <div class="content-layout">
         <div class="slide-label neon-cyan">CHAPTER 05 続き</div>
-        <h2 class="slide-title">僕の4エージェント構成</h2>
+        <h2 class="slide-title">僕の22エージェント構成</h2>
         <div class="flow-diagram" id="flow-diagram">
           <div class="flow-agent glass-card" style="animation-delay:0.1s">
             <div class="agent-icon">📋</div>
-            <div class="agent-name neon-cyan">Planner</div>
-            <div class="agent-role">要件をヒアリング<br>仕様書を書く</div>
+            <div class="agent-name neon-cyan">企画</div>
+            <div class="agent-role">Researcher / Planner<br>調べる・仕様を書く</div>
           </div>
           <div class="flow-arrow neon-cyan">→</div>
-          <div class="flow-agent glass-card" style="animation-delay:0.3s">
+          <div class="flow-agent glass-card" style="animation-delay:0.25s">
             <div class="agent-icon">🎨</div>
-            <div class="agent-name neon-magenta">Designer</div>
-            <div class="agent-role">画像・アイコンを<br>制作する</div>
+            <div class="agent-name neon-magenta">制作</div>
+            <div class="agent-role">Graphic / Music /<br>Code Generator</div>
           </div>
           <div class="flow-arrow neon-magenta">→</div>
-          <div class="flow-agent glass-card" style="animation-delay:0.5s">
-            <div class="agent-icon">⚙️</div>
-            <div class="agent-name neon-purple">Generator</div>
-            <div class="agent-role">仕様書通りに<br>コードを書く</div>
+          <div class="flow-agent glass-card" style="animation-delay:0.4s">
+            <div class="agent-icon">🛡️</div>
+            <div class="agent-name neon-purple">品質ゲート</div>
+            <div class="agent-role">法務・脆弱性・日英・<br>アセットの4体が並列</div>
           </div>
           <div class="flow-arrow neon-purple">→</div>
+          <div class="flow-agent glass-card" style="animation-delay:0.55s">
+            <div class="agent-icon">🧪</div>
+            <div class="agent-name" style="color:#34d399;text-shadow:0 0 8px #34d399;font-family:var(--font-head);font-size:0.9rem;font-weight:700;margin-bottom:6px">動的テスト</div>
+            <div class="agent-role">実ブラウザで起動して<br>本当に動くか見る</div>
+          </div>
+          <div class="flow-arrow" style="color:#34d399">→</div>
           <div class="flow-agent glass-card" style="animation-delay:0.7s">
             <div class="agent-icon">✅</div>
-            <div class="agent-name" style="color:#ffd700;text-shadow:0 0 8px #ffd700;font-family:var(--font-head);font-size:0.9rem;font-weight:700;margin-bottom:6px">Evaluator</div>
-            <div class="agent-role">100点満点で<br>採点する</div>
+            <div class="agent-name" style="color:#ffd700;text-shadow:0 0 8px #ffd700;font-family:var(--font-head);font-size:0.9rem;font-weight:700;margin-bottom:6px">採点・公開</div>
+            <div class="agent-role">Evaluator / Release<br>100点満点で採点</div>
           </div>
         </div>
         <p class="slide-desc" style="text-align:center;margin-top:20px">
-          <span class="neon-cyan">80点以上</span>で合格 → GitHubへ自動コミット。不合格なら Generator に差し戻し。
+          <span class="neon-cyan">80点以上</span>で合格 → 不合格なら Code Generator に差し戻し。<span style="color:rgba(255,255,255,0.55)">最初は4体、いまは22体。</span>
         </p>
       </div>
     </div>

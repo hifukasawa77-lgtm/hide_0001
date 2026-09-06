@@ -839,6 +839,9 @@ tar xzf <pkg>-<ver>.tgz
 openssl dgst -sha384 -binary package/<CDNパスと同じファイル> | openssl base64 -A
 ```
 
+- **同じURLなら同じ integrity**。割れていたら少なくとも片方は必ずブロックされる。
+  2026-09-06、`shogi_rpg.html` の react / react-dom が `gradius-1.html` と別の値を持っており、
+  **将棋RPGは本番で `React is not defined` のまま一度も動いていなかった**
 - **入れたら実物で通るか確かめる**。Playwright の `route` で「npmから取った同一バイト」を
   CDN URL へ返せば、CDNへ出られない環境でもSRI検証を実地で通せる。
   1バイト改ざんしてブロックされることまで見ること（ハッシュを間違えるとページが丸ごと死ぬ）

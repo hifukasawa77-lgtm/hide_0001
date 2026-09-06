@@ -286,12 +286,16 @@
   <div id="toast"></div>
 
   <!--
-    Tesseract.js（CDN）。本リポジトリの他CDNライブラリ（chart.js / marked 等）に倣い crossorigin を付与。
-    SRI(integrity) は本ビルド環境からCDNへ到達できず正規ハッシュを取得できなかったため未付与。
-    ネットワーク到達可能な環境で下記コマンドのハッシュを integrity="sha384-..." として追加することを推奨:
-      curl -sL https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesseract.min.js | openssl dgst -sha384 -binary | openssl base64 -A
+    Tesseract.js（CDN）。jsdelivr へ到達できない環境でも SRI は付けられる:
+    **jsdelivr は npm パッケージのファイルをそのまま配信する**ので、直通許可されている
+    registry.npmjs.org から tarball を取って同じファイルのハッシュを実測すればよい（2026-09-06 実施）。
+      curl -sO https://registry.npmjs.org/tesseract.js/-/tesseract.js-7.0.0.tgz
+      tar xzf tesseract.js-7.0.0.tgz && openssl dgst -sha384 -binary package/dist/tesseract.min.js | openssl base64 -A
+    版を上げるときは integrity も必ず取り直す（版だけ上げると無言でブロックされる）。
   -->
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesseract.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesseract.min.js"
+          integrity="sha384-2BQ3U3OdKOb0Uczxqr41I9UvZkzr4V9Hv8uSzMMZAlmhsFClvdZX5wi5fDCzG+tM"
+          crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script>
   (function () {
     'use strict';

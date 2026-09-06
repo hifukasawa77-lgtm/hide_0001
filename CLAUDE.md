@@ -818,6 +818,34 @@ PM（プロジェクトマネージャー）は深澤。PMOエージェントが
 ```
 
 ## 注意事項
+
+### CDNライブラリの版固定とSRI（`release-check` 検査#3 が機械検査する）
+
+- **`integrity` は「付いていること」に意味は無い。値の長さが合っているかを見る**。
+  2026-09-06、`notebook.html` の2本とも47バイト（sha384は**48バイト**必須）で、
+  **CDNが正しいファイルを返してもブラウザが必ずブロック**していた。目視では絶対に気づけない
+  （sha256=32 / sha384=48 / sha512=64バイト）
+- **版未固定 + integrity は禁止**。`npm/marked/marked.min.js` は最新へ解決するため、
+  ①更新された瞬間にハッシュ不一致で無言ブロック ②最新の marked には `marked.min.js` 自体が無く404、
+  の二重で読めなくなっていた。**必ず `@x.y.z` を書く**
+- **CDNへ到達できない環境でもSRIは算出できる**。jsdelivr / unpkg は
+  **npmパッケージのファイルをそのまま配信する**ので、直通許可されている `registry.npmjs.org` から
+  tarball を取って実測すればよい（`receipt-ocr.html` は「CDNへ到達できないため未付与」と
+  コメントを残したまま保留されていた。この手口で解決済み）:
+
+```bash
+curl -sO https://registry.npmjs.org/<pkg>/-/<pkg>-<ver>.tgz
+tar xzf <pkg>-<ver>.tgz
+openssl dgst -sha384 -binary package/<CDNパスと同じファイル> | openssl base64 -A
+```
+
+- **同じURLなら同じ integrity**。割れていたら少なくとも片方は必ずブロックされる。
+  2026-09-06、`shogi_rpg.html` の react / react-dom が `gradius-1.html` と別の値を持っており、
+  **将棋RPGは本番で `React is not defined` のまま一度も動いていなかった**
+- **入れたら実物で通るか確かめる**。Playwright の `route` で「npmから取った同一バイト」を
+  CDN URL へ返せば、CDNへ出られない環境でもSRI検証を実地で通せる。
+  1バイト改ざんしてブロックされることまで見ること（ハッシュを間違えるとページが丸ごと死ぬ）
+
 - **ディスクが厳しいときは軽量クローンを使う**。全部落とすと1.3GB（9割がassets）。
   `--depth 1 --filter=blob:none --sparse` で18MBまで落ち、触るゲームのassetsだけ後から足せる。
   手順とスクリプト: `docs/クローンを軽くする.md` / `scripts/slim-clone.ps1`

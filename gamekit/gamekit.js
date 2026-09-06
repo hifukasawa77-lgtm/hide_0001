@@ -201,8 +201,8 @@
         const r = canvas.getBoundingClientRect();
         const p = e.touches ? e.touches[0] : e;
         return {
-          x: ((p.clientX - r.left) / r.width) * canvas.width,
-          y: ((p.clientY - r.top) / r.height) * canvas.height,
+          x: ((p.clientX - r.left) / r.width) * (Number(canvas.dataset.logicalWidth) || canvas.width),
+          y: ((p.clientY - r.top) / r.height) * (Number(canvas.dataset.logicalHeight) || canvas.height),
         };
       };
       const down = (e) => {

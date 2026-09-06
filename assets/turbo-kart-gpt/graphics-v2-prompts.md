@@ -1,0 +1,15 @@
+# 新規画像の生成記録
+
+使用方法：内蔵 `image_gen` ツール。CLI/APIへのフォールバックは使用していません。以下のプロンプトで新規生成し、PNGを無加工で同梱しています。画像の保存先は、このファイルと同じフォルダー配下の `assets/turbo-kart-gpt/` です。
+
+## coastal-sunset-v2.png
+
+Use case: stylized-concept. Create a high quality original game environment background panorama, 1536x1024 landscape, for Turbo Kart Grand Prix kart racing game. Premium stylized 3D animation film environment, coastal Mediterranean race destination at warm sunset, peach golden clouds, soft blue sky, distant layered lavender mountains, turquoise sea, a few elegant stone coastal buildings and umbrella pines confined to the lower fifth. Horizon at 78 percent height, mostly beautiful open sky above. This is a distant skybox behind a separately rendered live race circuit, so NO roads, NO vehicles, NO foreground objects, NO text, NO logos, NO interface. Rich atmospheric perspective, natural warm sunlight from upper right, detailed painterly clouds, polished physically plausible materials, joyful upscale arcade racing aesthetic. No cyberpunk, no neon, no futuristic cities, no grids. Edge to edge clean full bleed artwork.
+
+## kart-rear-v2.png
+
+Use case: stylized-concept. Asset type: single isolated transparent PNG game sprite. One premium original racing go-kart with seated helmeted driver, viewed directly from BEHIND at a slightly elevated third person chase camera angle, symmetric straight rear view, no side view. Chunky wide black rubber rear tires, detailed alloy hubs, exposed rear engine and twin small chrome exhausts, aerodynamic cyan turquoise body panels and white racing stripe, carbon rear bumper, small rear wing, driver in dark racing suit and glossy cyan and white helmet seen from behind. Full vehicle including all tires and driver contained in frame with 12 percent transparent padding. High-end stylized 3D animated film rendering, beautiful rounded forms, physically believable metal and rubber, warm sunset key light upper right and cool fill left, sharp clean silhouette. Genuine TRANSPARENT background, no ground plane, no baked rectangular background, no text, no logos, no labels, no other objects, no shadow extending outside the vehicle. Vehicle centered and fills frame. Render as a square image 1024x1024.
+
+## coastal-pine-v2.png
+
+Use case: stylized-concept. Asset type: transparent game scenery sprite. A single mature Mediterranean umbrella pine tree, full tree from roots to crown, viewed at eye level, centered with generous transparent padding, isolated on genuinely transparent background. Wide rounded layered canopy of soft sage and olive green needles, irregular sculptural warm brown trunk branching visibly up through canopy, exposed roots, elegant natural silhouette. No ground plane. Premium stylized 3D animated film rendering for a coastal sunset kart racing game, warm golden rim lighting from upper right, cool gentle fill, natural soft detailed foliage, polished physically plausible bark. No text, no labels, no borders, no shadows outside object, no purple or magenta fringing, no neon, no other objects. Square 1024x1024.

@@ -28,23 +28,85 @@ if [ -z "$LOGS" ]; then ok "追加なし"; else
   while IFS= read -r l; do [ -n "$l" ] && note_fail "console.log残り: ${l:0:100}"; done <<< "$LOGS"
 fi
 
-echo "== 3. CDNスクリプトの SRI（integrity）欠落（変更HTML） =="
-CHANGED_HTML=$(git diff HEAD --name-only --diff-filter=ACM 2>/dev/null | grep -E '\.html$' || true)
-if [ -z "$CHANGED_HTML" ]; then ok "変更HTMLなし"; else
-  SRI_OK=1
-  while IFS= read -r f; do
-    [ -f "$f" ] || continue
-    # SRI適用不可として除外するホスト: 配信側がファイルを無告知で更新するため integrity を付けると壊れる。
-    # 除外は「提供元がSRI非対応と明示しているもの」に限る（追加時は理由をここに書くこと）。
-    #   - accounts.google.com/gsi/client … Google Identity Services。Googleがハッシュを固定しない
-    #   - www.googletagmanager.com/gtag/js … Google アナリティクス。配信内容が随時更新されるため
-    #     integrity を付けるとブラウザが読込をブロックする（Google もSRIを案内していない）。
-    #     16ページが同じスニペットを持つので、除外しないと該当ページを触るたびに偽の✗が出る
-    SRI_EXEMPT='accounts\.google\.com/gsi/client|www\.googletagmanager\.com/gtag/js'
-    NOSRI=$(grep -oE '<script[^>]*src="https://[^"]*"[^>]*>' "$f" | grep -v 'integrity=' | grep -cvE "$SRI_EXEMPT" || true)
-    if [ "${NOSRI:-0}" -gt 0 ]; then note_fail "$f: SRIなしのCDNスクリプト ×${NOSRI}"; SRI_OK=0; fi
-  done <<< "$CHANGED_HTML"
-  [ "$SRI_OK" = 1 ] && ok "SRI欠落なし"
+echo "== 3. CDNスクリプトの SRI・版固定（変更HTML） =="
+# integrity は「付いていること」に意味は無い。2026-09-06、notebook.html の2本とも値が47バイト
+# （sha384は48バイト必須）で、**CDNが正しいファイルを返してもブラウザが必ずブロック**していた。
+# しかも marked は版未固定＝最新へ解決し、最新には marked.min.js が無く404。二重に読めない状態が
+# 目視レビューを何度も通り抜けていた。よってここでは3点を機械検査する:
+#   (a) integrity の欠落  (b) integrity の値の長さ  (c) CDNの版未固定
+# 複数行に折り返した <script> タグも見る（旧実装は1行のタグしか拾えず素通ししていた）。
+# 変更ファイルの一覧は**Python側で git から取る**。heredocでスクリプトを渡しつつ一覧を
+# パイプで流すと、両方が stdin を奪い合って一覧が届かず、**全ての故障をすり抜ける偽の緑**になる
+# （2026-09-06、この検査を書いた直後に故障注入で踏んだ）。
+if command -v python3 >/dev/null 2>&1; then
+  SRI_OUT=$(python3 - <<'PYEOF3'
+import base64, re, subprocess, os
+# SRI適用不可として除外するホスト（提供元がSRI非対応と明示しているものに限る。追加時は理由を書くこと）
+#   - accounts.google.com/gsi/client … Google Identity Services。Googleがハッシュを固定しない
+#   - www.googletagmanager.com/gtag/js … Googleアナリティクス。配信内容が随時更新される
+EXEMPT = re.compile(r'accounts\.google\.com/gsi/client|www\.googletagmanager\.com/gtag/js')
+PINNED_CDN = re.compile(r'^https://(cdn\.jsdelivr\.net|unpkg\.com)/')
+DIGEST_BYTES = {'sha256': 32, 'sha384': 48, 'sha512': 64}
+try:
+    changed = subprocess.run(['git', 'diff', 'HEAD', '--name-only', '--diff-filter=ACM'],
+                             capture_output=True, text=True, timeout=30).stdout.split('\n')
+except Exception:
+    changed = []
+files = [f for f in (x.strip() for x in changed) if f.endswith('.html') and os.path.isfile(f)]
+out = []
+if not files:
+    print('OK:変更HTMLなし')
+else:
+    for f in files:
+        html = open(f, encoding='utf-8', errors='replace').read()
+        for tag in re.findall(r'<script\b[^>]*>', html, re.S):      # 複数行のタグも拾う
+            m = re.search(r'src="(https://[^"]+)"', tag)
+            if not m:
+                continue
+            url = m.group(1)
+            if EXEMPT.search(url):
+                continue
+            integ = re.search(r'integrity="([^"]+)"', tag)
+            if not integ:
+                out.append('FAIL:%s: SRIなしのCDNスクリプト → %s' % (f, url))
+            else:
+                for expr in integ.group(1).split():
+                    algo, _, val = expr.partition('-')
+                    need = DIGEST_BYTES.get(algo)
+                    if need is None:
+                        out.append('FAIL:%s: 未知のハッシュ種別 %s → %s' % (f, algo, url)); continue
+                    try:
+                        raw = base64.b64decode(val + '=' * (-len(val) % 4), validate=True)
+                    except Exception:
+                        out.append('FAIL:%s: integrity がbase64として壊れている → %s' % (f, url)); continue
+                    if len(raw) != need:
+                        out.append('FAIL:%s: integrity の長さが不正（%s は %dバイト必須・実際 %dバイト）→ %s'
+                                   % (f, algo, need, len(raw), url))
+            # 版未固定 + integrity は「更新された瞬間に無言でブロック」になる組み合わせ
+            if PINNED_CDN.match(url):
+                path = re.sub(r'^https://[^/]+/', '', url)
+                head = '/'.join(path.split('/')[:3])
+                if not re.search(r'@\d[\w.\-+]*', head):
+                    out.append('FAIL:%s: CDNの版が固定されていない（integrity と併用すると更新時に'
+                               '無言でブロックされる）→ %s' % (f, url))
+    if not out:
+        out.append('OK:SRI・版固定ともに問題なし')
+print('\n'.join(out))
+PYEOF3
+)
+  if [ -z "$SRI_OUT" ]; then
+    note_fail "検査#3 が何も出力しなかった（検査自体の故障を疑う）"
+  else
+    while IFS= read -r l; do
+      [ -z "$l" ] && continue
+      case "$l" in
+        OK:*)   ok "${l#OK:}" ;;
+        FAIL:*) note_fail "${l#FAIL:}" ;;
+      esac
+    done <<< "$SRI_OUT"
+  fi
+else
+  echo "  - python3なし（スキップ）"
 fi
 
 echo "== 4. 1MB超の新規ファイル／既存ファイルの急増 =="

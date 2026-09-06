@@ -5,11 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI Notebook — hide</title>
 <link rel="icon" href="assets/logo/favicon.svg" type="image/svg+xml">
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"
-        integrity="sha384-oxHpXKMl0SqN5PH/OkQfnlvLbBEqkmk/VVH0mhFkxIjVsJ/0nyxRUoUFUSjQEXU"
+<!-- CDNは版を固定し、integrity は実ファイルから実測した値を入れる。
+     以前は marked が版未固定（=最新へ解決）で、最新の marked には marked.min.js が無く404、
+     さらに両方の integrity が47バイト（sha384は48バイト必須）で必ず不一致になっていた。 -->
+<script src="https://cdn.jsdelivr.net/npm/marked@18.0.11/lib/marked.umd.js"
+        integrity="sha384-N2BlPYJH0HRuJRIZOGNTL/ymqHb++FCViUqW4rdB5/7fH+KvFTqyCvPPQ8X4nElj"
         crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"
-        integrity="sha384-MYlnwkrj/YgpZi2HEcb+UZGpN0RsLWvHRd9JLZN0iNPuYZ5c8TA5gRxRMmpHJNJ"
+        integrity="sha384-+VfUPEb0PdtChMwmBcBmykRMDd+v6D/oFmB3rZM/puCMDYcIvF968OimRh4KQY9a"
         crossorigin="anonymous"></script>
 <style>
   :root {

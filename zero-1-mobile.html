@@ -18,7 +18,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://cdn.jsdelivr.net https://huggingface.co https://*.huggingface.co https://*.hf.co https://raw.githubusercontent.com https://storage.googleapis.com https://api.openai.com; media-src 'self' blob: mediastream:; worker-src 'self' blob:; base-uri 'self'; form-action 'self'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <meta name="description" content="スマホの中だけで動くAIアシスタント。WebGPUでローカルLLMを端末内実行し、会話は外部へ送信しません。音声入力・読み上げ対応。ZERO-1 Mobile — a local LLM assistant that runs entirely on your phone.">
+  <meta name="description" content="スマホの中だけで動くAIアシスタント。WebGPUでローカルLLMを端末内実行し、既定では会話は外部へ送信しません（任意でクラウド頭脳への切り替えも可能）。音声入力・読み上げ対応。ZERO-1 Mobile — a local LLM assistant that runs entirely on your phone by default, with an optional cloud brain.">
   <title>ZERO-1 Mobile | スマホ内で動くAI</title>
   <link rel="canonical" href="https://hifukasawa77-lgtm.github.io/main/zero-1-mobile.html">
   <link rel="icon" href="assets/logo/favicon.svg" type="image/svg+xml">
@@ -358,7 +358,8 @@
   <div class="row">
     <span class="t"><b>クラウド頭脳 / Cloud Brain</b>
       <small id="cloud-note">自分のOpenAI APIキーで、より賢い返答を受け取れます。送信内容はOpenAIへ届きます。<br>
-        Use your own OpenAI API key for smarter replies. Your messages are sent to OpenAI.</small></span>
+        Use your own OpenAI API key for smarter replies. Your messages are sent to OpenAI.
+        <a href="privacy.html#cloud-brain" style="color:#a5f3fc">詳しくはプライバシーポリシーへ / See Privacy Policy</a></small></span>
     <button class="ghost" id="btn-cloud" aria-pressed="false">OFF</button>
   </div>
   <div class="row sub" id="cloud-options" hidden>

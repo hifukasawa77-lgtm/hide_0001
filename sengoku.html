@@ -13602,18 +13602,18 @@ class MapScene extends GameKit.Scene {
       bs.push({x:px+pw-200, y:py+ph-86, w:160, h:62, jp:'閉じる', en:'Close', sz:24, action:()=>{ this.overlay=null; this.ploy=null; }});
     } else if (ov.type==='naisei'){
       const pid=this.selected, prov=pid&&st.provinces[pid], gold=st.daimyo[st.playerDaimyo].gold;
-      const px=W/2-400, py=H/2-380, pw=800, ph=760;
-      const bw=pw-120, bx=px+60;
-      bs.push({x:bx, y:py+160, w:bw, h:100, jp:'城下開発（220貫）　開発+6', en:'Develop Castle Town', sz:26, ensz:16,
+      const px=W/2-560, py=H/2-532, pw=1120, ph=1064;
+      const bw=pw-168, bx=px+84;
+      bs.push({x:bx, y:py+230, w:bw, h:140, jp:'城下開発（220貫）　開発+6', en:'Develop Castle Town', sz:36, ensz:22,
         accent:'rgba(52,211,153,0.55)', on:prov&&gold>=220&&prov.development<95,
         action:g=>{ this._develop(g); }});
-      bs.push({x:bx, y:py+280, w:bw, h:100, jp:'施し（80貫）　民忠+15', en:'Alms: Loyalty +15', sz:26, ensz:16,
+      bs.push({x:bx, y:py+435, w:bw, h:140, jp:'施し（80貫）　民忠+15', en:'Alms: Loyalty +15', sz:36, ensz:22,
         accent:'rgba(251,191,36,0.55)', on:prov&&gold>=80&&(prov.minchu??60)<100,
         action:g=>{ this._alms(g); }});
-      bs.push({x:bx, y:py+400, w:bw, h:100, jp:'商人　▶　米 / 馬 / 鉄砲 / 家宝', en:'Merchant: Trade', sz:26, ensz:16,
+      bs.push({x:bx, y:py+640, w:bw, h:140, jp:'商人　▶　米 / 馬 / 鉄砲 / 家宝', en:'Merchant: Trade', sz:36, ensz:22,
         accent:'rgba(167,139,250,0.55)',
         action:()=>{ this.overlay={type:'shonin'}; }});
-      bs.push({x:px+pw/2-75, y:py+ph-80, w:150, h:64, jp:'閉じる', en:'Close', sz:24, action:()=>{ this.overlay=null; }});
+      bs.push({x:px+pw/2-105, y:py+952, w:210, h:90, jp:'閉じる', en:'Close', sz:34, action:()=>{ this.overlay=null; }});
     } else if (ov.type==='shonin'){
       const d=st.daimyo[st.playerDaimyo], price=st.ricePrice??100, gold=d.gold;
       const px=W/2-460, py=H/2-420, pw=920, ph=840;
@@ -13650,20 +13650,20 @@ class MapScene extends GameKit.Scene {
       if(tab==='merchant') MERCHANT_HOUSES.forEach((h,i)=>{const c=merchantContract(st,h.id),active=c.patron===st.playerDaimyo&&c.until>=st.turn;bs.push({x:px+780,y:py+160+i*126,w:260,h:92,jp:active?'契約中':'後援する',en:active?'Contracted':'Patronize',sz:22,ensz:12,accent:active?'rgba(74,222,128,.3)':'rgba(45,212,191,.58)',on:!active&&st.daimyo[st.playerDaimyo].gold>=merchantPatronCost(st,h.id),action:g=>this._patronMerchant(g,h.id)});});
       bs.push({x:px+pw/2-120,y:py+ph-78,w:240,h:58,jp:'閉じる',en:'Close',sz:23,action:()=>{this.overlay=null;}});    } else if (ov.type==='bulkGov'){
       const d=st.daimyo[st.playerDaimyo], gold=d.gold;
-      const px=W/2-440, py=H/2-420, pw=880, ph=820;
-      const bw=(pw-180)/2, bx1=px+70, bx2=px+70+bw+40;
+      const px=W/2-616, py=H/2-574, pw=1232, ph=1148;
+      const bw=(pw-252)/2, bx1=px+98, bx2=px+98+bw+56;
       const s=this._bulkStats();
-      bs.push({x:bx1, y:py+300, w:bw, h:96, jp:'全国一括開発 '+s.devN+'城', en:'-'+s.devCost+'貫  Develop all', sz:24, ensz:15,
+      bs.push({x:bx1, y:py+420, w:bw, h:134, jp:'全国一括開発 '+s.devN+'城', en:'-'+s.devCost+'貫  Develop all', sz:34, ensz:21,
         accent:'rgba(74,222,128,0.55)', on:s.devN>0 && gold>=220, action:g=>this._bulkDevelop(g)});
-      bs.push({x:bx2, y:py+300, w:bw, h:96, jp:'全国一括徴兵 '+s.recN+'城', en:'-'+s.recCost+'貫  Recruit all', sz:24, ensz:15,
+      bs.push({x:bx2, y:py+420, w:bw, h:134, jp:'全国一括徴兵 '+s.recN+'城', en:'-'+s.recCost+'貫  Recruit all', sz:34, ensz:21,
         accent:'rgba(248,113,113,0.55)', on:s.recN>0 && gold>0, action:g=>this._bulkRecruit(g)});
-      bs.push({x:bx1, y:py+430, w:bw, h:96, jp:(s.riceBuy>0?'兵糧補給 +'+s.riceBuy+'千石':'兵糧は十分'), en:(s.riceBuy>0?'-'+s.riceCost+'貫  Resupply 6mo':'Rice OK'), sz:23, ensz:15,
+      bs.push({x:bx1, y:py+602, w:bw, h:134, jp:(s.riceBuy>0?'兵糧補給 +'+s.riceBuy+'千石':'兵糧は十分'), en:(s.riceBuy>0?'-'+s.riceCost+'貫  Resupply 6mo':'Rice OK'), sz:32, ensz:21,
         accent:'rgba(251,191,36,0.55)', on:s.riceBuy>0 && gold>0, action:g=>this._bulkBuyRice(g)});
-      bs.push({x:bx2, y:py+430, w:bw, h:96, jp:(st.delegateInternal?'委任を解除':'内政を委任する'), en:(st.delegateInternal?'Delegation: ON':'Delegation: OFF'), sz:23, ensz:15,
+      bs.push({x:bx2, y:py+602, w:bw, h:134, jp:(st.delegateInternal?'委任を解除':'内政を委任する'), en:(st.delegateInternal?'Delegation: ON':'Delegation: OFF'), sz:32, ensz:21,
         accent:st.delegateInternal?'rgba(74,222,128,0.7)':'rgba(148,163,184,0.5)', action:g=>this._toggleDelegate(g)});
-      bs.push({x:bx1, y:py+606, w:pw-140, h:84, jp:'国家制度 ▶ 軍団・技術・城下町・豪商', en:'Realm Systems', sz:24, ensz:14,
+      bs.push({x:bx1, y:py+848, w:pw-196, h:118, jp:'国家制度 ▶ 軍団・技術・城下町・豪商', en:'Realm Systems', sz:34, ensz:20,
         accent:'rgba(56,189,248,0.55)', action:()=>this._openRealmSystems()});
-      bs.push({x:px+pw/2-110, y:py+ph-92, w:220, h:70, jp:'閉じる', en:'Close', sz:26, action:()=>{ this.overlay=null; }});
+      bs.push({x:px+pw/2-154, y:py+ph-129, w:308, h:98, jp:'閉じる', en:'Close', sz:36, action:()=>{ this.overlay=null; }});
     } else if (ov.type==='trade'){
       const d=st.daimyo[st.playerDaimyo];
       const ts=this._tradeStats();
@@ -15983,23 +15983,23 @@ class MapScene extends GameKit.Scene {
   }
   _drawNaisei(ctx){
     const st=this.state, pid=this.selected, prov=pid&&st.provinces[pid];
-    const px=W/2-400, py=H/2-380, pw=800, ph=760;
+    const px=W/2-560, py=H/2-532, pw=1120, ph=1064;
     GameKit.UI.glassPanel(ctx, px, py, pw, ph, {radius:22, fill:'rgba(8,14,26,0.97)', stroke:'rgba(52,211,153,0.46)'});
-    T(ctx, '内政 / Domestic Affairs', px+pw/2, py+36, {size:38, weight:'bold', color:'#4ade80', align:'center'});
+    T(ctx, '内政 / Domestic Affairs', px+pw/2, py+50, {size:53, weight:'bold', color:'#4ade80', align:'center'});
     if (prov){
       const mc=prov.minchu??60;
       const mcColor=mc<30?'#f87171':mc<60?'#fbbf24':'#4ade80';
       const p=DATA.provById[pid];
-      T(ctx, (p?.nameJP||pid)+'　城下開発: '+prov.development+'　民忠: ', px+pw/2, py+90, {size:24, color:'#94a3b8', align:'center'});
-      T(ctx, mc+'%', px+pw/2+160, py+90, {size:24, weight:'bold', color:mcColor, align:'left'});
+      T(ctx, (p?.nameJP||pid)+'　城下開発: '+prov.development+'　民忠: ', px+pw/2, py+126, {size:34, color:'#94a3b8', align:'center'});
+      T(ctx, mc+'%', px+pw/2+224, py+126, {size:34, weight:'bold', color:mcColor, align:'left'});
     }
-    // 各説明はボタン(py+160 / py+280 / py+400)の直上に置く（旧値ではボタンの背後に重なっていた）
-    T(ctx, '城下開発 — 城下を整備して収入・徴兵力を高める', px+80, py+132, {size:20, color:'#94a3b8'});
-    T(ctx, '施し　　 — 民に財を施し民の忠心（民忠）を高める', px+80, py+252, {size:20, color:'#94a3b8'});
-    T(ctx, '商人　　 — 米・馬・鉄砲・家宝の売買（月替わり相場）', px+80, py+372, {size:20, color:'#94a3b8'});
+    // 各説明はボタン(py+230 / py+435 / py+640)の直上に置く（ボタンとの間隔を35pxで確保し重なりを防ぐ）
+    T(ctx, '城下開発 — 城下を整備して収入・徴兵力を高める', px+112, py+195, {size:28, color:'#94a3b8'});
+    T(ctx, '施し　　 — 民に財を施し民の忠心（民忠）を高める', px+112, py+400, {size:28, color:'#94a3b8'});
+    T(ctx, '商人　　 — 米・馬・鉄砲・家宝の売買（月替わり相場）', px+112, py+605, {size:28, color:'#94a3b8'});
     if (prov){
       const mc=prov.minchu??60;
-      if (mc<30) T(ctx, '⚠ 民忠が低下中！一揆が発生するおそれがあります', px+pw/2, py+ph-150, {size:22, weight:'bold', color:'#f87171', align:'center'});
+      if (mc<30) T(ctx, '⚠ 民忠が低下中！一揆が発生するおそれがあります', px+pw/2, py+854, {size:31, weight:'bold', color:'#f87171', align:'center'});
     }
   }
   _drawShonin(ctx){
@@ -16071,27 +16071,27 @@ class MapScene extends GameKit.Scene {
   }
   _drawBulkGov(ctx){
     const st=this.state, d=st.daimyo[st.playerDaimyo];
-    const px=W/2-440, py=H/2-420, pw=880, ph=820;
+    const px=W/2-616, py=H/2-574, pw=1232, ph=1148;
     GameKit.UI.glassPanel(ctx, px, py, pw, ph, {radius:22, fill:'rgba(8,14,26,0.97)', stroke:'rgba(232,192,122,0.5)'});
-    T(ctx, '統治 / Governance', px+pw/2, py+36, {size:38, weight:'bold', color:'#e8c07a', align:'center'});
-    T(ctx, '全国一括の内政と、家臣への委任（自動内政）', px+pw/2, py+82, {size:20, color:'#94a3b8', align:'center'});
+    T(ctx, '統治 / Governance', px+pw/2, py+50, {size:53, weight:'bold', color:'#e8c07a', align:'center'});
+    T(ctx, '全国一括の内政と、家臣への委任（自動内政）', px+pw/2, py+115, {size:28, color:'#94a3b8', align:'center'});
     // 国情サマリー（ボタン列と間隔が詰まっているため元サイズを維持）
     const owned=ownedProvinces(st, st.playerDaimyo);
     let totalSol=0; owned.forEach(pid=>totalSol+=st.provinces[pid].soldiers);
     const consume=riceConsumptionOf(st, st.playerDaimyo);
     const months=consume>0?Math.floor((d.rice||0)/consume):'∞';
-    const statY=py+134;
+    const statY=py+188;
     [['領国', owned.length+'城','#e2e8f0'],['総兵力', totalSol+'人','#e2e8f0'],['金銭', d.gold+'貫','#f6d58a']].forEach((c,i)=>{
-      const cx=px+90+i*((pw-180)/3)+((pw-180)/6);
-      T(ctx, c[0], cx, statY, {size:22, color:'#94a3b8', align:'center'});
-      T(ctx, c[1], cx, statY+38, {size:34, weight:'bold', color:c[2], align:'center'});
+      const cx=px+126+i*((pw-252)/3)+((pw-252)/6);
+      T(ctx, c[0], cx, statY, {size:31, color:'#94a3b8', align:'center'});
+      T(ctx, c[1], cx, statY+53, {size:48, weight:'bold', color:c[2], align:'center'});
     });
     const riceWarn=(consume>0 && (d.rice||0)<consume*2);
-    T(ctx, '兵糧 '+Math.round(d.rice||0)+'千石　月消費 '+consume+'　備蓄 約'+months+'ヶ月分'+(riceWarn?'  ⚠兵站危機':''), px+pw/2, py+224, {size:22, weight:riceWarn?'bold':'normal', color:riceWarn?'#f87171':'#cbd5e1', align:'center'});
+    T(ctx, '兵糧 '+Math.round(d.rice||0)+'千石　月消費 '+consume+'　備蓄 約'+months+'ヶ月分'+(riceWarn?'  ⚠兵站危機':''), px+pw/2, py+314, {size:31, weight:riceWarn?'bold':'normal', color:riceWarn?'#f87171':'#cbd5e1', align:'center'});
     // 委任ステータス（ボタン群の下）
     const on=!!st.delegateInternal;
-    T(ctx, '委任 / Delegation：'+(on?'ON（毎ターン自動で開発・徴兵・施し・兵糧補給）':'OFF'), px+pw/2, py+544, {size:23, weight:'bold', color:on?'#4ade80':'#94a3b8', align:'center'});
-    T(ctx, '※一括／委任は自国領のみ。金の続く範囲で実行されます', px+pw/2, py+580, {size:17, color:'#7d93ab', align:'center'});
+    T(ctx, '委任 / Delegation：'+(on?'ON（毎ターン自動で開発・徴兵・施し・兵糧補給）':'OFF'), px+pw/2, py+762, {size:32, weight:'bold', color:on?'#4ade80':'#94a3b8', align:'center'});
+    T(ctx, '※一括／委任は自国領のみ。金の続く範囲で実行されます', px+pw/2, py+812, {size:24, color:'#7d93ab', align:'center'});
   }
   // 特産品交易シーン（OS-10）
   _drawTrade(ctx){

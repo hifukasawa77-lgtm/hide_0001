@@ -1715,7 +1715,7 @@ check('153. window.ZERO1_MOBILE にクラウド頭脳の新規関数・定数が
 check('155. 新規UI文言（クラウド頭脳・APIキー・エラー）が日英併記になっている',
   /クラウド頭脳 \/ Cloud Brain/.test(pageSource) && /Invalid API key/.test(pageSource)
     && /Rate limited/.test(pageSource) && /Model not found/.test(pageSource)
-    && /保存 \/ Save/.test(pageSource) && /削除 \/ Remove/.test(pageSource));
+    && /保存 \/ Save/.test(pageSource) && /削除 \/ Delete/.test(pageSource));
 
 const innerHtmlAssignments = (pageSource.match(/\.innerHTML\s*=/g) ?? []).length;
 check('156. クラウド頭脳の新規コードに innerHTML/eval/new Function を使っていない（静的）',

@@ -15,7 +15,7 @@
     CSPに弾かれ、「例外は出るのに理由が分からない」状態になる。
     media-src に blob: が要る。付け忘れるとカメラ映像を <video> に流した瞬間に止まる。
   -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://cdn.jsdelivr.net https://huggingface.co https://*.huggingface.co https://*.hf.co https://raw.githubusercontent.com https://storage.googleapis.com; media-src 'self' blob: mediastream:; worker-src 'self' blob:; base-uri 'self'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://cdn.jsdelivr.net https://huggingface.co https://*.huggingface.co https://*.hf.co https://raw.githubusercontent.com https://storage.googleapis.com https://api.openai.com; media-src 'self' blob: mediastream:; worker-src 'self' blob:; base-uri 'self'; form-action 'self'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="description" content="スマホの中だけで動くAIアシスタント。WebGPUでローカルLLMを端末内実行し、会話は外部へ送信しません。音声入力・読み上げ対応。ZERO-1 Mobile — a local LLM assistant that runs entirely on your phone.">
@@ -114,6 +114,8 @@
     }
     .card h2{margin:.1em 0 .5em; font-size:1.02rem}
     .card p{margin:.35em 0; font-size:.86rem; color:var(--muted)}
+    /* クラウド頭脳だけで始めるカード（WebGPU非対応端末の受け皿）。既存 --purple を使うだけで新しい配色は作らない */
+    .card.highlight{border-color:rgba(167,139,250,0.45); box-shadow:0 0 20px rgba(167,139,250,0.16)}
     .grad{background:linear-gradient(135deg,var(--cyan) 0%,var(--purple) 100%);
       -webkit-background-clip:text; background-clip:text; color:transparent}
 
@@ -234,6 +236,14 @@
     .row.sub .t b{font-size:.82rem; color:var(--muted)}
     .row.sub .opts{display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end}
     .row.sub .ghost{padding:6px 10px; font-size:.76rem}
+    /* APIキー・モデル名入力欄。.composer textarea と同じ見た目で揃える */
+    .row input[type=password], .row input[type=text], .card input[type=password]{
+      background:var(--card); color:var(--text); border:1px solid var(--border); border-radius:11px;
+      padding:8px 10px; font:inherit; font-size:.82rem; width:100%;
+    }
+    .row input[type=password]:focus, .row input[type=text]:focus, .card input[type=password]:focus{
+      outline:none; border-color:rgba(34,211,238,0.45)
+    }
     .ghost[aria-pressed="true"]{border-color:rgba(34,211,238,0.6); color:#a5f3fc; background:rgba(34,211,238,0.12)}
     .ghost{background:transparent; color:var(--text); border:1px solid var(--border); border-radius:11px; padding:8px 12px; font:inherit; font-size:.82rem; cursor:pointer}
     .backdrop{position:fixed; inset:0; z-index:4; background:rgba(0,0,0,0.5)}
@@ -287,6 +297,17 @@
       </div>
     </div>
 
+    <!-- クラウド頭脳だけで始める入口（M8）。WebGPU非対応端末でもここからチャットへ進める -->
+    <div class="card" id="cloud-entry-card">
+      <h2>クラウド頭脳だけで始める / Start with Cloud Brain only</h2>
+      <p class="progress-note">この端末にモデルをダウンロードせず、自分のOpenAI APIキーで始めます。
+        質問はOpenAIへ送信されます。<br>
+        Skip the on-device download and use your own OpenAI API key instead. Messages are sent to OpenAI.</p>
+      <input type="password" id="cloud-entry-key" placeholder="sk-..." autocomplete="off"
+        aria-label="OpenAI APIキー / OpenAI API key" style="margin:8px 0">
+      <button class="ghost" id="btn-cloud-entry" style="width:100%">クラウド頭脳で始める / Start with Cloud Brain</button>
+    </div>
+
     <p class="foot">ZERO-1のPC版はOllamaを使いますが、こちらはブラウザのWebGPUだけで動きます。<br>
       作った会話・入力内容はどこにも送信されません。</p>
   </section>
@@ -333,6 +354,27 @@
   <div class="row">
     <span class="t"><b>モデルを変える / Change model</b><small id="current-model">—</small></span>
     <button class="ghost" id="btn-change">選び直す</button>
+  </div>
+  <div class="row">
+    <span class="t"><b>クラウド頭脳 / Cloud Brain</b>
+      <small id="cloud-note">自分のOpenAI APIキーで、より賢い返答を受け取れます。送信内容はOpenAIへ届きます。<br>
+        Use your own OpenAI API key for smarter replies. Your messages are sent to OpenAI.</small></span>
+    <button class="ghost" id="btn-cloud" aria-pressed="false">OFF</button>
+  </div>
+  <div class="row sub" id="cloud-options" hidden>
+    <span class="t"><b>APIキー / API key</b>
+      <small id="cloud-key-status">未設定 / Not set</small></span>
+    <span class="opts">
+      <input type="password" id="cloud-key-input" placeholder="sk-..." autocomplete="off"
+        aria-label="OpenAI APIキー / OpenAI API key">
+      <button class="ghost" id="btn-cloud-save">保存 / Save</button>
+      <button class="ghost" id="btn-cloud-clear">削除 / Remove</button>
+    </span>
+  </div>
+  <div class="row sub" id="cloud-advanced" hidden>
+    <span class="t"><b>モデル名（上級者向け）/ Model (advanced)</b>
+      <small>空欄なら既定のモデルを使います / Leave blank to use the default model</small></span>
+    <input type="text" id="cloud-model-input" placeholder="gpt-5.6" aria-label="モデル名 / Model name">
   </div>
   <div class="row">
     <!-- ★モデルを消す口が画面のどこにも無かった。容量を空けたい人は
@@ -611,10 +653,16 @@ function parseInline(text) {
  * ★最初の1つが届くまでの時間を別に出す。スマホでは前処理に数秒かかることがあり、
  *   合計だけ見ると「遅い」に見えてしまう。
  */
-function speedText(stats) {
+/**
+ * ★label は既定 '端末内'（ローカル頭脳）。クラウド頭脳の応答にそのまま使うと
+ *   「クラウド頭脳(GPT) · 端末内 · …」という自己矛盾した表示になるため、
+ *   sendCloud() では空文字を渡して場所の接頭辞そのものを省く
+ */
+function speedText(stats, label = '端末内') {
   if (!stats || !(stats.tokens > 1) || !(stats.streamMs > 0)) return '';
   const rate = stats.tokens / (stats.streamMs / 1000);
-  return `端末内 · 最初の返事まで${(stats.firstMs / 1000).toFixed(1)}秒 · 約${rate.toFixed(1)} tok/秒`;
+  const prefix = label ? `${label} · ` : '';
+  return `${prefix}最初の返事まで${(stats.firstMs / 1000).toFixed(1)}秒 · 約${rate.toFixed(1)} tok/秒`;
 }
 
 /** 起動にかかった時間。2回目が速いことは、数字で見せないと伝わらない */
@@ -711,6 +759,12 @@ function storageRowText(model, cached) {
   return `${model.name}（約${(model.sizeMB / 1024).toFixed(1)}GB）を消して容量を空けます。会話と設定は残ります。`;
 }
 
+// ★const は巻き上がらない。この橋渡し（window.ZERO1_MOBILE）より後ろで宣言した定数を
+//   直接値として載せると TDZ で起動ごと落ちる（synth-eq の saveTimer と同じ形）。
+//   クラウド頭脳の定数はここより後ろで使うが、値そのものはここで先に確定させる
+const CLOUD_MODEL_DEFAULT = 'gpt-5.6';
+const CLOUD_API_URL = 'https://api.openai.com/v1/chat/completions';
+
 // 検査から触るための橋渡し。新しい関数を足したらここへも足すこと
 // （足し忘れると検査側が "is not a function" で落ちる）
 window.ZERO1_MOBILE = { MODELS, MODEL_TIERS, resolveModels, recommendModel, storageFit, deviceReport, canRun, buildMessages, progressText, SYSTEM_PROMPT,
@@ -721,7 +775,12 @@ window.ZERO1_MOBILE = { MODELS, MODEL_TIERS, resolveModels, recommendModel, stor
   waitForAdapter, ensureGpuAlive, reloadEngine, keepResume, takeResume, offerReload,
   // 端末内ツール層とサイト知識層（判定は assets/js/zero1-tools.js の純粋関数）
   runTool, matchTool, pickGames, buildSiteContext, durationText, answerWithTool, toolContext,
-  siteData: () => window.AGENT_DATA ?? null };
+  siteData: () => window.AGENT_DATA ?? null,
+  // クラウド頭脳（BYOK）。新しい関数を足したらここへも足すこと（足し忘れると検査側が
+  // "is not a function" で落ちる）
+  readCloudKey, writeCloudKey, clearCloudKey, maskKey, cloudReady,
+  parseSSE, classifyCloudError, streamCloudAnswer, sendCloud,
+  CLOUD_MODEL_DEFAULT, CLOUD_API_URL };
 
 // ---------------------------------------------------------------------------
 // 画面
@@ -742,7 +801,9 @@ const state = { engine:null, model:null, busy:false, history:[], speak:false, li
   // 生成を途中で止めたか／どのモデルが端末に残っているか
   stopping:false, cached:new Set(), speed:null, bootMs:0, recovery:null, pending:'',
   // 端末内ツール（時計・タイマー・メモ・単位換算・計算・サイト内検索）の作用側
-  timers:[], toolUses:0 };
+  timers:[], toolUses:0,
+  // クラウド頭脳（BYOK）。既定 'local'。キーは起動時に1回だけ読む（メモリ上のキャッシュ）
+  brain:'local', cloudKey:null, cloudModel:CLOUD_MODEL_DEFAULT, cloudAbort:null };
 
 // CSPが何かを止めたときは、例外のメッセージには出ないことがある。
 // ここで拾わないと「起動できませんでした」だけが残り、原因に辿り着けない。
@@ -1708,6 +1769,157 @@ function ensureGpuAlive() {
   return state.recovery;
 }
 
+// ---------------------------------------------------------------------------
+// クラウド頭脳 / Cloud Brain — BYOK（利用者自身のOpenAI APIキー）でのオプトイン機能。
+//
+// ★既定はこれまで通りローカル頭脳（WebGPU）。ここは「賢さが要る」利用者が
+//   自分のキーで自分の分だけ課金される経路で、リポジトリ・環境変数にキーは一切置かない
+//   （キーは localStorage にのみ保存。CLAUDE.md「APIキーに関する禁止事項」はBYOKには当たらない）。
+// ★fetch は非同期I/Oのため、ローカル頭脳のようにWeb Workerへ追い出す必要が無い
+//   （WebLLMを別スレッドにするのはWASMコンパイル等CPU拘束作業への対策であり、通信I/Oには該当しない）。
+// ★モデルIDは実装時点で公式ドキュメントの確認ができなかったため、CLOUD_MODEL_DEFAULT という
+//   差し替え可能な定数1箇所に閉じ込め、詳細設定でも上書きできるようにしてある（名称が違っても壊れない設計）。
+// ---------------------------------------------------------------------------
+// ★CLOUD_MODEL_DEFAULT / CLOUD_API_URL は window.ZERO1_MOBILE の橋渡し（756行目付近）より
+//   前で確定済み（TDZ回避）。ここでは残りのキー名だけを定義する
+const BRAIN_KEY = 'zero1-mobile-brain';
+const CLOUD_KEY_KEY = 'zero1-mobile-cloud-key';
+const CLOUD_MODEL_KEY = 'zero1-mobile-cloud-model';
+
+function readCloudKey() { return readStore(CLOUD_KEY_KEY, null); }
+function writeCloudKey(key) { writeStore(CLOUD_KEY_KEY, key); }
+function clearCloudKey() { try { localStorage.removeItem(CLOUD_KEY_KEY); } catch { /* 既存方針: 失敗は無視 */ } }
+
+/** 表示用マスク。先頭と末尾だけ見せる。ログにも画面にもこれ以外の形で出さない */
+function maskKey(key) {
+  if (!key || key.length < 8) return '••••';
+  return `${key.slice(0, 3)}…${key.slice(-4)}`;
+}
+
+/** クラウド頭脳で送れる状態か（ONかつキー保存済み） */
+function cloudReady() { return state.brain === 'cloud' && Boolean(state.cloudKey); }
+
+/**
+ * SSEの行を分割してJSONへ。OpenAI Chat Completions のストリーミング形式
+ * （`data: {...}\n\n`・終端 `data: [DONE]`）を前提にする。
+ * ★チャンクが `\n\n` の境目で分割されるとは限らない。バッファへ貯めてから切り出す
+ *   （検査でわざと変な位置に分割したチャンクを流し込んで確認する）
+ */
+async function parseSSE(reader, onDelta) {
+  const decoder = new TextDecoder();
+  let buf = '';
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    let idx;
+    while ((idx = buf.indexOf('\n\n')) >= 0) {
+      const line = buf.slice(0, idx).trim();
+      buf = buf.slice(idx + 2);
+      if (!line.startsWith('data:')) continue;
+      const payload = line.slice(5).trim();
+      if (payload === '[DONE]') return;
+      try {
+        const json = JSON.parse(payload);
+        const delta = json.choices?.[0]?.delta?.content ?? '';
+        if (delta) onDelta(delta);
+      } catch { /* 不完全な行は無視（次のチャンクで揃うことがある） */ }
+    }
+  }
+}
+
+/**
+ * クラウド頭脳の失敗理由を判別する。
+ * ★キーの値そのものは絶対に含めない。status とOpenAIのエラーcodeだけを見る
+ */
+function classifyCloudError(status, bodyText, cause) {
+  if (cause?.name === 'AbortError') return { hint: '', retryable: false, stopped: true };
+  if (status === 401) return { hint: 'APIキーが正しくありません。設定で確認してください / Invalid API key', retryable: false };
+  if (status === 429) return { hint: '利用上限に達しています。しばらくしてから、またはOpenAI側の請求設定をご確認ください / Rate limited', retryable: true };
+  if (status === 404) return { hint: `指定したモデルが見つかりません（${state.cloudModel}）。設定でモデル名を確認してください / Model not found`, retryable: false };
+  if (status >= 500) return { hint: 'OpenAI側で問題が起きています。しばらくしてからお試しください / OpenAI server error', retryable: true };
+  if (!status) return { hint: '通信できませんでした。電波状況をご確認ください / Could not reach the server', retryable: true };
+  return { hint: `エラーが起きました（status ${status}）/ Request failed`, retryable: true };
+}
+
+/** クラウド頭脳での1回ぶんの応答。streamAnswer と対になる */
+async function streamCloudAnswer(node, context = '') {
+  const controller = new AbortController();
+  state.cloudAbort = controller;
+  const body = bodyOf(node);
+  const began = performance.now();
+  let firstAt = 0, tokens = 0, answer = '';
+  const res = await fetch(CLOUD_API_URL, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${state.cloudKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: state.cloudModel || CLOUD_MODEL_DEFAULT,
+      messages: buildMessages(state.history, 8, 1200, context),
+      stream: true, temperature: 0.6, max_tokens: 512,
+    }),
+    signal: controller.signal,
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    const err = new Error('cloud_http_error');
+    err.status = res.status; err.bodyText = text;
+    throw err;
+  }
+  await parseSSE(res.body.getReader(), (delta) => {
+    if (state.stopping) return;
+    if (!answer) { node.classList.remove('pending'); firstAt = performance.now(); }
+    tokens += 1; answer += delta;
+    // ★流している間は素のテキストのまま（textContent）。体裁を整えるのは書き終わってから
+    body.textContent = answer;
+    $('chat').scrollTop = $('chat').scrollHeight;
+  });
+  state.speed = firstAt ? { tokens, firstMs: firstAt - began, streamMs: performance.now() - firstAt } : null;
+  return answer;
+}
+
+/** クラウド頭脳での送信本体。send() の分岐から呼ばれる */
+async function sendCloud(clean) {
+  state.busy = true; state.stopping = false; paintSend(true);
+  void keepAwake();
+  $('input').value = '';
+  state.history.push({ role: 'user', text: clean });
+  addMessage('user', clean).dataset.h = String(state.history.length - 1);
+  paintSuggestions();
+  const node = addMessage('assistant', '考えています…', true);
+  const context = buildSiteContext(clean, window.AGENT_DATA ?? null);
+  let answer = '';
+  try {
+    answer = await streamCloudAnswer(node, context);
+    if (!answer) answer = state.stopping ? '（止めました / Stopped）' : 'うまく答えられませんでした。もう一度お願いします。';
+    node.classList.remove('pending');
+    finishAnswer(node, answer);
+    const speed = speedText(state.speed, ''); // 場所の接頭辞は付けない（直前の「クラウド頭脳」タグと重複するため）
+    tagMessage(node, [state.stopping ? '途中で止めました / Stopped' : '', 'クラウド頭脳(GPT) / Cloud brain', speed].filter(Boolean).join(' · '));
+    state.history.push({ role: 'assistant', text: answer });
+    node.dataset.h = String(state.history.length - 1);
+    writeStore(HISTORY_KEY, state.history.slice(-40));
+    paintMemoryBoundary();
+    if (state.speak && !state.stopping) speak(answer);
+  } catch (cause) {
+    node.classList.remove('pending');
+    const { hint, retryable, stopped } = classifyCloudError(cause?.status, cause?.bodyText, cause);
+    if (!stopped) {
+      bodyOf(node).textContent = hint;
+      if (retryable) actionMessage(node, 'もう一度試す / Retry', () => void sendCloud(clean));
+      // ★自動フォールバックはしない（S1）。選べる形でだけ提示する
+      if (state.engine) actionMessage(node, 'ローカルモデルで答える / Answer locally instead', () => {
+        state.brain = 'local'; writeStore(BRAIN_KEY, 'local');
+        node.remove(); state.history.pop();
+        void send(clean);
+      });
+    } else {
+      bodyOf(node).textContent = '（止めました / Stopped）';
+    }
+  } finally {
+    state.busy = false; state.cloudAbort = null; paintSend(false); paintSuggestions();
+  }
+}
+
 /** 1回ぶんの返答を流し込む。載せ直しのため、送信本体から切り出してある */
 async function streamAnswer(node, context = '') {
   const stream = await state.engine.chat.completions.create({
@@ -1753,6 +1965,8 @@ function stopGenerating() {
   if (!state.busy) return false;
   state.stopping = true;
   try { state.engine?.interruptGenerate?.(); } catch { /* 効かなくても受け取る側で抜ける */ }
+  // クラウド頭脳で生成中なら fetch も中断する（既存の interruptGenerate と同じUXで統一）
+  try { state.cloudAbort?.abort(); } catch { /* 既に終わっている等は無視 */ }
   return true;
 }
 
@@ -1816,6 +2030,9 @@ async function send(text) {
   //   モデルの載っていない状態（起動前・GPUが切れた後）でも時計とメモは答えられる——
   //   engine の有無を見る前に置いているのはそのため。
   if (answerWithTool(clean)) return;
+
+  // ★クラウド頭脳がONかつキー保存済みなら、ローカルモデルの有無に関わらずそちらで答える
+  if (cloudReady()) { await sendCloud(clean); return; }
 
   // ★載せ直しの最中なら、それを待ってから送る。ここで弾くと
   //   「押しても何も起きない」になる（例外もエラーも出ない）
@@ -2074,6 +2291,74 @@ $('btn-change').addEventListener('click', () => {
   $('progress-note').textContent = 'モデルを選び直して、もう一度起動してください。';
 });
 
+// ---------------------------------------------------------------------------
+// クラウド頭脳（BYOK）— 設定シートのトグル・キー入力・setup画面の入口
+// ---------------------------------------------------------------------------
+function paintCloudHeadNote() {
+  $('head-note').textContent = state.brain === 'cloud'
+    ? 'クラウド頭脳使用中・質問はOpenAIへ送信されます / Cloud brain active — sent to OpenAI'
+    : (state.engine ? bootText(state.models.find((m) => m.id === state.model)?.name ?? state.model, (state.bootMs || 0) / 1000)
+      : 'スマホの中だけで動きます / Runs entirely on this phone');
+}
+
+$('btn-cloud').addEventListener('click', () => {
+  const next = state.brain === 'cloud' ? 'local' : 'cloud';
+  if (next === 'cloud' && !state.cloudKey) { $('cloud-options').hidden = false; return; } // まずキーを求める
+  state.brain = next; writeStore(BRAIN_KEY, next);
+  $('btn-cloud').textContent = next === 'cloud' ? 'ON' : 'OFF';
+  $('btn-cloud').setAttribute('aria-pressed', String(next === 'cloud'));
+  $('cloud-options').hidden = next !== 'cloud';
+  $('cloud-advanced').hidden = next !== 'cloud';
+  paintCloudHeadNote();
+});
+$('btn-cloud-save').addEventListener('click', () => {
+  const key = $('cloud-key-input').value.trim();
+  if (!key) return;
+  state.cloudKey = key; writeCloudKey(key);
+  $('cloud-key-input').value = '';
+  $('cloud-key-status').textContent = `保存済み: ${maskKey(key)} / Saved`;
+});
+$('btn-cloud-clear').addEventListener('click', () => {
+  clearCloudKey(); state.cloudKey = null;
+  $('cloud-key-status').textContent = '未設定 / Not set';
+  if (state.brain === 'cloud') {
+    state.brain = 'local'; writeStore(BRAIN_KEY, 'local');
+    $('btn-cloud').textContent = 'OFF';
+    $('btn-cloud').setAttribute('aria-pressed', 'false');
+    $('cloud-options').hidden = true;
+    $('cloud-advanced').hidden = true;
+    paintCloudHeadNote();
+  }
+});
+$('cloud-model-input').addEventListener('change', () => {
+  const value = $('cloud-model-input').value.trim();
+  state.cloudModel = value || CLOUD_MODEL_DEFAULT;
+  writeStore(CLOUD_MODEL_KEY, state.cloudModel);
+});
+// setup画面: モデルをダウンロードせずクラウド頭脳だけで始める（M8・WebGPU非対応端末の受け皿）
+$('btn-cloud-entry').addEventListener('click', () => {
+  const typed = $('cloud-entry-key').value.trim();
+  // 既にキーが保存済みなら、入力欄が空でもそれを使う（毎回打ち直させない）
+  const key = typed || state.cloudKey;
+  if (!key) return;
+  if (typed) writeCloudKey(typed);
+  state.cloudKey = key;
+  state.brain = 'cloud';
+  writeStore(BRAIN_KEY, 'cloud');
+  $('cloud-entry-key').value = '';
+  $('btn-cloud').textContent = 'ON';
+  $('btn-cloud').setAttribute('aria-pressed', 'true');
+  $('cloud-options').hidden = false;
+  $('cloud-advanced').hidden = false;
+  $('cloud-key-status').textContent = `保存済み: ${maskKey(key)} / Saved`;
+  $('setup').classList.add('hidden');
+  $('chat').classList.remove('hidden');
+  $('composer').classList.remove('hidden');
+  paintCloudHeadNote();
+  if (!state.history.length) addMessage('assistant', 'こんにちは。クラウド頭脳で動いています。質問はOpenAIへ送信されます。何から始めますか？');
+  paintSuggestions();
+});
+
 (async function boot() {
   // ★古いService Workerは、直しても端末に残り続ける。残ったまま起動すると
   //   直したはずの不具合（通信の横取りによる Failed to fetch）がそのまま再現する。
@@ -2084,6 +2369,19 @@ $('btn-change').addEventListener('click', () => {
   $('btn-speak').textContent = state.speak ? 'ON' : 'OFF';
   $('btn-speak').setAttribute('aria-pressed', String(state.speak));
   renderHistory();
+  // クラウド頭脳（BYOK）: 保存済みの状態を復元。キーが無いのにONは矛盾なので安全側(local)へ倒す
+  state.brain = readStore(BRAIN_KEY, 'local');
+  state.cloudKey = readCloudKey();
+  state.cloudModel = readStore(CLOUD_MODEL_KEY, CLOUD_MODEL_DEFAULT);
+  if (state.brain === 'cloud' && !state.cloudKey) state.brain = 'local';
+  $('btn-cloud').textContent = state.brain === 'cloud' ? 'ON' : 'OFF';
+  $('btn-cloud').setAttribute('aria-pressed', String(state.brain === 'cloud'));
+  $('cloud-options').hidden = state.brain !== 'cloud';
+  $('cloud-advanced').hidden = state.brain !== 'cloud';
+  $('cloud-key-status').textContent = state.cloudKey ? `保存済み: ${maskKey(state.cloudKey)} / Saved` : '未設定 / Not set';
+  if (state.cloudModel !== CLOUD_MODEL_DEFAULT) $('cloud-model-input').value = state.cloudModel;
+  if (state.cloudKey) $('btn-cloud-entry').textContent = 'クラウド頭脳で続ける / Continue with Cloud Brain';
+  if (state.brain === 'cloud') paintCloudHeadNote();
   const env = await readEnvironment();
   renderChecks(env);
   state.env = env;
@@ -2111,6 +2409,8 @@ $('btn-change').addEventListener('click', () => {
   if (!canRun(env)) {
     $('btn-start').disabled = true;
     $('progress-note').textContent = 'この端末では動かせません。Android の Chrome を最新にしてお試しください。';
+    // ★M8: WebGPU非対応端末の受け皿。クラウド頭脳だけで始める入口を目立たせる
+    $('cloud-entry-card').classList.add('highlight');
   }
   // ★GPUが戻らずに読み込み直したときは、押させずにそのまま起動へ進む。
   //   覚書は takeResume() が読んだ時点で消えているので、失敗しても輪にならない

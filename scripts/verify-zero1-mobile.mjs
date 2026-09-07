@@ -1415,6 +1415,313 @@ check('137. ツール層とサイト知識を事前キャッシュに入れて�
 
 await tools.close();
 
+// ===========================================================================
+// クラウド頭脳 / Cloud Brain（BYOK） — specs/zero1_cloud_brain.md §5 の新規項目
+//
+// ★ここも「関数は正しいのに画面が使っていない」を見逃さないため、可能な限り
+//   実際のUI操作（ボタンクリック・入力）を通す。window.fetch を差し込むのは
+//   `__ZERO1_WEBLLM` と同じ考え方（CDNへ出ずに合成のOpenAIエンドポイントで確かめる）。
+// ===========================================================================
+console.log('\n== クラウド頭脳（BYOK）の検査 ==');
+
+check('138. CSPのconnect-srcにhttps://api.openai.comが含まれる（静的）',
+  /connect-src[^"]*https:\/\/api\.openai\.com/.test(pageSource));
+
+/**
+ * クラウド頭脳の送信フローを、実際のUI操作で通しで確かめる。
+ * window.fetch を CLOUD_API_URL だけ横取りし、それ以外は素通しする
+ * （__ZERO1_WEBLLM の合成ライブラリと同じ考え方。page.route ではなく window.fetch を
+ *   差し込むのは、ストリーミングの分割・中断のタイミングを検査側で完全に制御するため）。
+ */
+async function withCloud({ status = 200, chunks = ['こんに', 'ちは', '。'], delayMs = 0,
+  networkFail = false, failOnce = false, ask = '', stopAt = 0, clickRetry = false,
+  fakeEngine = false, seedKey = 'sk-TEST-should-never-leak-98765' } = {}) {
+  const scoped = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const cdnRequests = [];
+  scoped.on('request', (req) => {
+    if (/cdn\.jsdelivr\.net|huggingface\.co|raw\.githubusercontent\.com/.test(req.url())) cdnRequests.push(req.url());
+  });
+  await scoped.addInitScript(([status, chunks, delayMs, networkFail, failOnce, seedKey]) => {
+    // ★入口カードから毎回打たせない検査もあるので、キーは事前に保存しておく
+    if (seedKey) { try { localStorage.setItem('zero1-mobile-cloud-key', JSON.stringify(seedKey)); } catch { /* 無視 */ } }
+    window.__CLOUD_CALLS = 0;
+    window.__CLOUD_ABORTED = 0;
+    window.__CLOUD_REQUESTS = [];
+    window.__PWNED = 0;
+    const original = window.fetch.bind(window);
+    window.fetch = (input, init) => {
+      const url = typeof input === 'string' ? input : input.url;
+      if (url !== 'https://api.openai.com/v1/chat/completions') return original(input, init);
+      window.__CLOUD_CALLS += 1;
+      const callNo = window.__CLOUD_CALLS;
+      window.__CLOUD_REQUESTS.push({ headers: Object.keys(init?.headers ?? {}), auth: init?.headers?.Authorization ?? '' });
+      if (networkFail && (!failOnce || callNo === 1)) return Promise.reject(new TypeError('Failed to fetch'));
+      if (status !== 200) {
+        return Promise.resolve(new Response(JSON.stringify({ error: { message: 'boom' } }),
+          { status, headers: { 'Content-Type': 'application/json' } }));
+      }
+      const encoder = new TextEncoder();
+      const signal = init?.signal;
+      const stream = new ReadableStream({
+        async start(controller) {
+          let aborted = false;
+          signal?.addEventListener('abort', () => {
+            aborted = true;
+            window.__CLOUD_ABORTED += 1;
+            try { controller.error(new DOMException('The operation was aborted.', 'AbortError')); } catch { /* 既に閉じている */ }
+          });
+          for (const piece of chunks) {
+            if (aborted) return;
+            if (delayMs) await new Promise((r) => setTimeout(r, delayMs));
+            if (aborted) return;
+            const line = `data: ${JSON.stringify({ choices: [{ delta: { content: piece } }] })}\n\n`;
+            try { controller.enqueue(encoder.encode(line)); } catch { return; }
+          }
+          if (!aborted) { try { controller.enqueue(encoder.encode('data: [DONE]\n\n')); controller.close(); } catch { /* 無視 */ } }
+        },
+      });
+      return Promise.resolve(new Response(stream, { status: 200 }));
+    };
+  }, [status, chunks, delayMs, networkFail, failOnce, seedKey]);
+  await scoped.goto(`${BASE}/${PAGE}`, { waitUntil: 'domcontentloaded' });
+  await scoped.waitForFunction(() => window.ZERO1_MOBILE_READY === true, { timeout: 15_000 });
+  if (fakeEngine) await scoped.evaluate(() => { window.ZERO1_MOBILE_STATE.engine = {}; });
+  // 「クラウド頭脳だけで始める」入口から入る（保存済みキーがあれば入力欄は空のままでよい）
+  await scoped.locator('#btn-cloud-entry').click();
+  await scoped.waitForFunction(() => !document.getElementById('chat').classList.contains('hidden'), { timeout: 10_000 });
+  if (ask) {
+    await scoped.locator('#input').fill(ask);
+    await scoped.locator('#btn-send').click();
+    if (stopAt) {
+      // 1文字でも出てから止める（何も出ていないうちに押すと、何を止めたのか分からない）
+      await scoped.waitForFunction(() => (document.querySelector('#msgs .msg:last-child .body')?.textContent ?? '').length > 0,
+        { timeout: 10_000 }).catch(() => {});
+      await scoped.waitForTimeout(stopAt);
+      await scoped.locator('#btn-send').click();
+    }
+    await scoped.waitForFunction(() => {
+      const last = document.querySelector('#msgs .msg:last-child');
+      return last && !last.classList.contains('pending') && window.ZERO1_MOBILE_STATE?.busy === false;
+    }, { timeout: 15_000 }).catch(() => {});
+    if (clickRetry) {
+      await scoped.locator('#msgs .msg:last-child .tools button', { hasText: 'もう一度試す' }).click();
+      await scoped.waitForFunction(() => {
+        const last = document.querySelector('#msgs .msg:last-child');
+        return last && !last.classList.contains('pending') && window.ZERO1_MOBILE_STATE?.busy === false;
+      }, { timeout: 15_000 }).catch(() => {});
+    }
+  }
+  const result = await scoped.evaluate(() => ({
+    body: document.querySelector('#msgs .msg:last-child .body')?.textContent ?? '',
+    bodyHtml: document.querySelector('#msgs .msg.ai:last-of-type .body')?.innerHTML ?? '',
+    tag: document.querySelector('#msgs .msg:last-child .tag')?.textContent ?? '',
+    actions: [...document.querySelectorAll('#msgs .msg:last-child .tools button')].map((b) => b.textContent ?? ''),
+    domText: document.body.innerText,
+    domHtml: document.documentElement.outerHTML,
+    headNote: document.getElementById('head-note').textContent,
+    calls: window.__CLOUD_CALLS,
+    aborted: window.__CLOUD_ABORTED,
+    pwned: window.__PWNED ?? 0,
+    chatting: !document.getElementById('chat').classList.contains('hidden'),
+  }));
+  result.cdnRequests = cdnRequests;
+  await scoped.close();
+  return result;
+}
+
+// --- 送信フロー（成功） ---------------------------------------------------------
+const flow = await withCloud({ ask: 'こんにちは', chunks: ['こん', 'にち', 'は。'] });
+check('144. クラウド頭脳の送信フロー（ストリーミング表示・タグ表示）が実際のUIで動く',
+  flow.body === 'こんにちは。' && /クラウド頭脳\(GPT\)/.test(flow.tag) && /Cloud brain/.test(flow.tag),
+  `${flow.body} ｜ ${flow.tag}`);
+
+// --- 401: キーを見せず、やり直しボタンも出さない --------------------------------
+const unauthorized = await withCloud({ status: 401, ask: 'こんにちは' });
+check('145. 401失敗時、キーを含まないエラーが出て「もう一度試す」は出ない',
+  unauthorized.actions.length === 0 && /APIキー|Invalid API key/.test(unauthorized.body)
+    && !unauthorized.domText.includes('sk-TEST') && !unauthorized.domHtml.includes('sk-TEST'),
+  unauthorized.body);
+
+// --- ネットワーク中断 → 「もう一度試す」で再送し成功する ------------------------
+const retried = await withCloud({ networkFail: true, failOnce: true, ask: 'こんにちは',
+  clickRetry: true, chunks: ['了解', 'です'] });
+check('146. ネットワーク中断後、「もう一度試す」ボタンで再送し成功する',
+  retried.calls === 2 && retried.body === '了解です', `${retried.calls}回 ｜ ${retried.body}`);
+
+// --- 「止める」ボタンでクラウドのfetchが中断される -------------------------------
+const cloudStopped = await withCloud({ delayMs: 150, chunks: ['あ', 'い', 'う', 'え', 'お'], ask: 'こんにちは', stopAt: 60 });
+check('147. 「止める」ボタンでクラウド生成中のfetchが中断される（AbortController）',
+  cloudStopped.aborted >= 1 && /止めました/.test(cloudStopped.body), `中断${cloudStopped.aborted}回 ｜ ${cloudStopped.body}`);
+
+// --- 失敗時、ローカルエンジンがある場合だけ「ローカルモデルで答える」が出る ------
+const failWithEngine = await withCloud({ status: 500, ask: 'こんにちは', fakeEngine: true });
+const failWithoutEngine = await withCloud({ status: 500, ask: 'こんにちは', fakeEngine: false });
+check('148. クラウド失敗時、ローカルエンジンがある場合だけ代替ボタンが出る（自動フォールバックしない）',
+  failWithEngine.actions.some((a) => /ローカルモデルで答える/.test(a))
+    && !failWithoutEngine.actions.some((a) => /ローカルモデルで答える/.test(a)),
+  `engine有: ${failWithEngine.actions.join(',')} ｜ engine無: ${failWithoutEngine.actions.join(',')}`);
+
+// --- 「クラウド頭脳だけで始める」導線はローカルの取得先に一切触れない -----------
+const entryOnly = await withCloud({ ask: '' });
+check('149. 「クラウド頭脳だけで始める」導線でCDN・重みへのリクエストが発生しない',
+  entryOnly.cdnRequests.length === 0 && entryOnly.chatting === true, entryOnly.cdnRequests.join(', '));
+
+// --- モデルの出力からHTMLを組み立てない（XSS注入試験） --------------------------
+const cloudRich = await withCloud({ ask: '教えて', chunks: [FORMATTED] });
+check('157. クラウド応答からHTMLを組み立てない（返答経由のXSSを作らない）',
+  !/<img/i.test(cloudRich.bodyHtml) && !/<script/i.test(cloudRich.bodyHtml)
+    && /&lt;img/i.test(cloudRich.bodyHtml) && cloudRich.pwned !== 1,
+  cloudRich.bodyHtml.includes('&lt;img') ? '文字として出ている' : cloudRich.bodyHtml.slice(-60));
+
+// --- WebGPU非対応端末で、クラウド頭脳の入口カードが強調表示される ---------------
+async function withNoWebGPU() {
+  const scoped = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  await scoped.addInitScript(() => {
+    Object.defineProperty(navigator, 'gpu', { configurable: true, value: undefined });
+  });
+  await scoped.goto(`${BASE}/${PAGE}`, { waitUntil: 'domcontentloaded' });
+  await scoped.waitForFunction(() => window.ZERO1_MOBILE_READY === true, { timeout: 15_000 });
+  const out = await scoped.evaluate(() => ({
+    highlighted: document.getElementById('cloud-entry-card').classList.contains('highlight'),
+    startDisabled: document.getElementById('btn-start').disabled,
+  }));
+  await scoped.close();
+  return out;
+}
+const noGpu = await withNoWebGPU();
+check('150. WebGPU非対応端末で、クラウド頭脳の入口カードが強調表示される（M8）',
+  noGpu.highlighted && noGpu.startDisabled, JSON.stringify(noGpu));
+
+// --- 設定シートの一連の操作（トグル・キー保存・マスク表示・削除） ---------------
+const sheet = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+await sheet.goto(`${BASE}/${PAGE}`, { waitUntil: 'domcontentloaded' });
+await sheet.waitForFunction(() => window.ZERO1_MOBILE_READY === true, { timeout: 15_000 });
+
+const initialBrain = await sheet.evaluate(() => window.ZERO1_MOBILE_STATE.brain);
+check('139. 初回ロード時（localStorage空）に state.brain === local（既定OFF）', initialBrain === 'local', initialBrain);
+
+await sheet.locator('#btn-settings').click();
+await sheet.locator('#btn-cloud').click(); // キー未保存のままONを試みる
+const afterToggleNoKey = await sheet.evaluate(() => ({
+  brain: window.ZERO1_MOBILE_STATE.brain,
+  optionsHidden: document.getElementById('cloud-options').hidden,
+}));
+check('140. キー未保存のまま btn-cloud をONにしても state.brain は local のまま（キー要求が先）',
+  afterToggleNoKey.brain === 'local' && afterToggleNoKey.optionsHidden === false, JSON.stringify(afterToggleNoKey));
+
+const TEST_KEY = 'sk-SHEETTEST-should-never-leak-13579';
+await sheet.locator('#cloud-key-input').fill(TEST_KEY);
+await sheet.locator('#btn-cloud-save').click();
+const afterSave = await sheet.evaluate(() => ({
+  cloudKey: window.ZERO1_MOBILE_STATE.cloudKey,
+  status: document.getElementById('cloud-key-status').textContent,
+  domHtml: document.documentElement.outerHTML,
+  domText: document.body.innerText,
+}));
+check('141. キー保存 → state.cloudKeyに反映 → 画面のマスク表示に生キーが一切出現しない',
+  afterSave.cloudKey === TEST_KEY && afterSave.status.includes('sk-…')
+    && !afterSave.domHtml.includes(TEST_KEY) && !afterSave.domText.includes(TEST_KEY),
+  afterSave.status);
+
+await sheet.locator('#btn-cloud').click(); // 保存済みなので今度はONになる
+const afterOn = await sheet.evaluate(() => ({
+  brain: window.ZERO1_MOBILE_STATE.brain,
+  ariaPressed: document.getElementById('btn-cloud').getAttribute('aria-pressed'),
+  headNote: document.getElementById('head-note').textContent,
+}));
+check('152. #head-note がクラウド頭脳ONで文言が切り替わる（OpenAIへ送信される旨）',
+  afterOn.brain === 'cloud' && afterOn.ariaPressed === 'true' && /OpenAI/.test(afterOn.headNote), afterOn.headNote);
+
+await sheet.locator('#btn-cloud-clear').click();
+const afterClear = await sheet.evaluate(() => ({
+  brain: window.ZERO1_MOBILE_STATE.brain,
+  cloudKey: window.ZERO1_MOBILE_STATE.cloudKey,
+  headNote: document.getElementById('head-note').textContent,
+}));
+check('151. btn-cloud-clear でキー削除後、state.brain が自動的に local へ戻る',
+  afterClear.brain === 'local' && afterClear.cloudKey === null && !/OpenAI/.test(afterClear.headNote),
+  JSON.stringify(afterClear));
+
+const leaked = await sheet.evaluate((key) => {
+  const hits = [];
+  for (let i = 0; i < localStorage.length; i += 1) {
+    const k = localStorage.key(i);
+    const v = localStorage.getItem(k) ?? '';
+    if (k !== 'zero1-mobile-cloud-key' && v.includes(key)) hits.push(k);
+  }
+  return hits;
+}, TEST_KEY);
+check('154. zero1-mobile-cloud-key 以外のlocalStorageキーにAPIキー文字列が紛れ込んでいない',
+  leaked.length === 0, leaked.join(', '));
+await sheet.close();
+
+// --- 純粋関数の分岐網羅（classifyCloudError / parseSSE） ------------------------
+const cloudErr = await page.evaluate(() => {
+  const { classifyCloudError } = window.ZERO1_MOBILE;
+  return {
+    e401: classifyCloudError(401, '', null),
+    e429: classifyCloudError(429, '', null),
+    e404: classifyCloudError(404, '', null),
+    e500: classifyCloudError(500, '', null),
+    net: classifyCloudError(undefined, undefined, new TypeError('Failed to fetch')),
+    abort: classifyCloudError(undefined, undefined, { name: 'AbortError' }),
+  };
+});
+check('142. classifyCloudError の分岐網羅（401/429/404/5xx/ネットワーク不能/AbortError）',
+  cloudErr.e401.retryable === false && !/sk-/.test(cloudErr.e401.hint)
+    && cloudErr.e429.retryable === true
+    && cloudErr.e404.retryable === false
+    && cloudErr.e500.retryable === true
+    && cloudErr.net.retryable === true
+    && cloudErr.abort.stopped === true && cloudErr.abort.retryable === false,
+  JSON.stringify(cloudErr));
+
+// ★チャンクが \n\n の境目で分割されるとは限らない。わざと3文字ずつに切って注入する
+const sse = await page.evaluate(async () => {
+  const { parseSSE } = window.ZERO1_MOBILE;
+  const text = `data: ${JSON.stringify({ choices: [{ delta: { content: 'こんにちは' } }] })}\n\ndata: [DONE]\n\n`;
+  const encoder = new TextEncoder();
+  const chunks = [];
+  for (let i = 0; i < text.length; i += 3) chunks.push(text.slice(i, i + 3));
+  let idx = 0;
+  const reader = {
+    async read() {
+      if (idx >= chunks.length) return { done: true, value: undefined };
+      const value = encoder.encode(chunks[idx]);
+      idx += 1;
+      return { done: false, value };
+    },
+  };
+  let out = '';
+  await parseSSE(reader, (delta) => { out += delta; });
+  return out;
+});
+check('143. parseSSE が\\n\\n境界をまたぐ意地悪な分割チャンクでも正しく復元する', sse === 'こんにちは', sse);
+
+// --- 橋渡しの列挙チェック --------------------------------------------------------
+const bridgeCheck = await page.evaluate(() => {
+  const fns = ['readCloudKey', 'writeCloudKey', 'clearCloudKey', 'maskKey', 'cloudReady',
+    'parseSSE', 'classifyCloudError', 'streamCloudAnswer', 'sendCloud'];
+  const missingFns = fns.filter((n) => typeof window.ZERO1_MOBILE[n] !== 'function');
+  const consts = ['CLOUD_MODEL_DEFAULT', 'CLOUD_API_URL'];
+  const missingConsts = consts.filter((n) => typeof window.ZERO1_MOBILE[n] !== 'string');
+  return { missingFns, missingConsts };
+});
+check('153. window.ZERO1_MOBILE にクラウド頭脳の新規関数・定数が全て公開されている',
+  bridgeCheck.missingFns.length === 0 && bridgeCheck.missingConsts.length === 0,
+  [...bridgeCheck.missingFns, ...bridgeCheck.missingConsts].join(', '));
+
+// --- i18n / 静的grep -------------------------------------------------------------
+check('155. 新規UI文言（クラウド頭脳・APIキー・エラー）が日英併記になっている',
+  /クラウド頭脳 \/ Cloud Brain/.test(pageSource) && /Invalid API key/.test(pageSource)
+    && /Rate limited/.test(pageSource) && /Model not found/.test(pageSource)
+    && /保存 \/ Save/.test(pageSource) && /削除 \/ Remove/.test(pageSource));
+
+const innerHtmlAssignments = (pageSource.match(/\.innerHTML\s*=/g) ?? []).length;
+check('156. クラウド頭脳の新規コードに innerHTML/eval/new Function を使っていない（静的）',
+  innerHtmlAssignments === 5 && !/\beval\s*\(/.test(pageSource) && !/new\s+Function\s*\(/.test(pageSource),
+  `innerHTML代入 ${innerHtmlAssignments}件（既存5件から増えていないこと）`);
+
 const shot = path.join(ROOT, 'test-screenshots');
 fs.mkdirSync(shot, { recursive: true });
 await page.screenshot({ path: path.join(shot, 'zero-1-mobile.png'), fullPage: false });

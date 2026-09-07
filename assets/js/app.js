@@ -6613,6 +6613,7 @@
       const TRANS = {
         ja: {
           'skip-to-main': '本文へスキップ',
+          'nav-privacy': 'プライバシーポリシー',
           'nav-local': '地域情報',
           'nav-gourmet': 'グルメまとめ',
           'nav-hobby': '趣味',
@@ -6901,6 +6902,7 @@
         },
         en: {
           'skip-to-main': 'Skip to main content',
+          'nav-privacy': 'Privacy Policy',
           'nav-local': 'Local',
           'nav-gourmet': 'Gourmet',
           'nav-hobby': 'Hobbies',

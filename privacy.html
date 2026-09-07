@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-src 'none'; base-uri 'self'; form-action 'self';">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="hideの部屋のプライバシーポリシー。静的サイトの基本方針と、ZERO-1 Mobileのクラウド頭脳（Cloud Brain）機能で発生する外部送信について説明します。Privacy policy for hide's Room, including the opt-in Cloud Brain feature in ZERO-1 Mobile.">
+<link rel="canonical" href="https://hifukasawa77-lgtm.github.io/main/privacy.html">
+<link rel="icon" href="assets/logo/favicon.svg" type="image/svg+xml">
+<title>プライバシーポリシー / Privacy Policy — hide</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --cyan: #06b6d4; --cyan-soft: rgba(6,182,212,.1);
+    --purple: #a855f7; --purple-soft: rgba(168,85,247,.1);
+    --bg: #fffbf5; --surface: #fff;
+    --text: #1c1917; --muted: #736c66;
+    --line: rgba(28,25,23,.1);
+    --radius: 16px;
+    --shadow: 0 4px 20px rgba(0,0,0,.07);
+  }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', 'Hiragino Kaku Gothic ProN', system-ui, sans-serif; min-height: 100vh; line-height: 1.75; }
+
+  /* ─ Header ─ */
+  header {
+    background: var(--surface); border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; z-index: 50;
+    padding: 0 clamp(16px, 5vw, 48px); height: 60px;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 1px 8px rgba(0,0,0,.05);
+  }
+  .logo { font-size: 1.15rem; font-weight: 900; color: var(--purple); text-decoration: none; letter-spacing: .05em; }
+  .back-link { font-size: .82rem; color: var(--muted); text-decoration: none; border: 1px solid var(--line); border-radius: 20px; padding: 5px 14px; transition: background .15s; }
+  .back-link:hover { background: var(--line); }
+
+  /* ─ Hero ─ */
+  .hero { padding: 56px clamp(16px, 5vw, 48px) 32px; text-align: center; }
+  .hero-label { display: inline-block; background: var(--purple-soft); color: var(--purple); border-radius: 20px; padding: 4px 14px; font-size: .72rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 14px; }
+  .hero h1 { font-size: clamp(1.6rem, 5vw, 2.3rem); font-weight: 900; margin-bottom: 8px; }
+  .hero .sub { color: var(--muted); font-size: .92rem; }
+  .updated { display: inline-block; margin-top: 14px; font-size: .78rem; color: var(--muted); border: 1px solid var(--line); border-radius: 20px; padding: 4px 12px; }
+
+  /* ─ Content ─ */
+  main { max-width: 760px; margin: 0 auto; padding: 0 clamp(16px, 5vw, 40px) 72px; }
+  .section { background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 26px 28px; margin-bottom: 22px; }
+  .section.highlight { border-color: rgba(168,85,247,.35); background: linear-gradient(180deg, rgba(168,85,247,.05), rgba(6,182,212,.04)); }
+  .section h2 { font-size: 1.08rem; font-weight: 800; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+  .section h2 .en { font-size: .78rem; font-weight: 600; color: var(--muted); }
+  .section .jp { margin-top: 12px; font-size: .92rem; }
+  .section .en { margin-top: 8px; font-size: .84rem; color: var(--muted); }
+  .section ul { margin: 10px 0 0 1.2em; }
+  .section li { margin-bottom: 10px; font-size: .9rem; }
+  .section li .en { display: block; margin-top: 3px; font-size: .8rem; color: var(--muted); }
+  .badge { display: inline-block; font-size: .68rem; font-weight: 700; letter-spacing: .04em; border-radius: 6px; padding: 2px 8px; }
+  .badge.cyan { background: var(--cyan-soft); color: var(--cyan); }
+  .badge.purple { background: var(--purple-soft); color: var(--purple); }
+  a.inline-link { color: var(--purple); text-decoration: underline; text-underline-offset: 2px; }
+
+  footer { border-top: 1px solid var(--line); padding: 24px; text-align: center; font-size: .78rem; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="index.html">hide.</a>
+  <a class="back-link" href="index.html">← ポートフォリオへ / Back to portfolio</a>
+</header>
+
+<div class="hero">
+  <div class="hero-label">Privacy Policy</div>
+  <h1>プライバシーポリシー</h1>
+  <p class="sub">Privacy Policy — what this site does (and doesn't) send outside your browser</p>
+  <div class="updated">更新日 / Last updated: 2026-09-07</div>
+</div>
+
+<main>
+
+  <section class="section">
+    <h2>1. 基本方針 <span class="en">Basic policy</span></h2>
+    <p class="jp">本サイト「hideの部屋」は GitHub Pages 上でホスティングされた静的サイトで、個人のサーバーを持ちません。ゲームの進行状況・設定・会話履歴などのほとんどの機能は、お使いのブラウザの <code>localStorage</code> にのみ保存され、外部へ送信されることはありません。</p>
+    <p class="en">This site, "hide's Room," is a static site hosted on GitHub Pages and does not run its own backend server. Most features — game progress, settings, chat history, and so on — are stored only in your browser's <code>localStorage</code> and are never transmitted externally.</p>
+  </section>
+
+  <section class="section highlight" id="cloud-brain">
+    <h2><span class="badge purple">Cloud Brain</span> 2. ZERO-1 Mobile の「クラウド頭脳 / Cloud Brain」について <span class="en">About ZERO-1 Mobile's Cloud Brain</span></h2>
+    <p class="jp"><code>zero-1-mobile.html</code>（ZERO-1 Mobile）には、「クラウド頭脳 / Cloud Brain」という<strong>任意のオプトイン機能</strong>があります。<strong>既定は必ずOFF</strong>で、利用者が明示的に有効化しない限り、外部への送信は一切発生しません。</p>
+    <p class="jp">この機能をONにして、ご自身のOpenAI APIキー（BYOK: Bring Your Own Key）を設定した場合に<strong>限り</strong>、以後の会話内容が OpenAI, Inc. の提供するAPI（<code>api.openai.com</code>）へ送信されます。</p>
+    <ul>
+      <li>送信は利用者の端末（ブラウザ）から OpenAI へ<strong>直接</strong>行われます。本サイトの運営者（hide）は、このAPIキーも会話内容も一切収集・保持・閲覧しません。運営者が用意したサーバーを経由することもありません。
+        <span class="en">The request goes directly from your device (browser) to OpenAI. The site operator (hide) never collects, stores, or views your API key or conversation content, and no operator-run server sits in between.</span></li>
+      <li>APIキーはブラウザの <code>localStorage</code> にのみ保存され、送信先は CSP（Content-Security-Policy）の <code>connect-src</code> で <code>api.openai.com</code> 等に限定されています。
+        <span class="en">Your API key is stored only in your browser's <code>localStorage</code>. The page's CSP restricts <code>connect-src</code> so requests can only go to the allow-listed destinations, including <code>api.openai.com</code>.</span></li>
+      <li>この機能の利用で発生する課金は、<strong>利用者ご自身のOpenAIアカウント</strong>に対して発生します。本サイト運営者への課金は一切発生しません。
+        <span class="en">Any usage charges from this feature are billed to <strong>your own OpenAI account</strong>. The site operator is never billed.</span></li>
+      <li>OpenAIへ送信されたデータの取り扱いは OpenAI 社のプライバシーポリシー（外部サイト）に従います。<a class="inline-link" href="https://openai.com/policies/privacy-policy" target="_blank" rel="noopener noreferrer">OpenAI Privacy Policy ↗</a>
+        <span class="en">Data sent to OpenAI is handled under OpenAI's own privacy policy (external site).</span></li>
+    </ul>
+  </section>
+
+  <section class="section">
+    <h2><span class="badge cyan">案内エージェント</span> 3. サイト内チャット（案内エージェント）について <span class="en">About the site guide chat agent</span></h2>
+    <p class="jp">サイト右下に表示される案内エージェント（チャットウィジェット）は、入力された質問を本サイト運営者が管理する Cloudflare Worker を経由して Cloudflare Workers AI（Gemma / Llama系モデル）へ送信し、回答を生成します。ログイン・アカウント登録は不要で、氏名やメールアドレス等の入力を求めることもありません。回答精度の改善のため、匿名化された質問・回答の一部を共有の学習メモリへ一時的に保存する場合がありますが、個人を特定できる情報は含みません。</p>
+    <p class="en">The site's chat widget (bottom-right) sends what you type to a Cloudflare Worker managed by the site operator, which relays it to Cloudflare Workers AI (Gemma/Llama-family models) to generate a reply. No login or account is required, and you are never asked for your name or email address. To improve future answers, an anonymized subset of question/answer pairs may be cached in a shared learning store, but it does not include personally identifying information.</p>
+  </section>
+
+  <section class="section">
+    <h2>4. その他の外部連携（任意機能） <span class="en">Other external integrations (opt-in)</span></h2>
+    <p class="jp">一部のページ（例: ダッシュボードのGoogleカレンダー連携）では、利用者ご自身の操作でGoogle等の外部サービスと連携する機能があります。連携するかどうかは利用者の選択に委ねられ、連携しない限り外部へのデータ送信は発生しません。また、フォントやCDN配信のJavaScriptライブラリなど一部の静的アセットは外部サーバーから読み込まれますが、これらの読み込みに会話内容や個人情報が含まれることはありません。</p>
+    <p class="en">Some pages (for example, the dashboard's Google Calendar integration) offer optional connections to external services like Google, initiated only by your own action. Nothing is sent unless you choose to connect. A few static assets (web fonts, CDN-hosted JavaScript libraries) are also loaded from external servers, but these requests never include your conversation content or personal data.</p>
+    <p class="jp">トップページの「ダッシュボード」を開き、ブラウザの位置情報許可を与えた場合のみ、緯度・経度が天気・雨雲レーダー・大気質の各カードの取得先（国土地理院の逆ジオコーダー、Open-Meteo、ウェザーニュース、Windyの雨雲レーダー表示）へ送信されます。許可しなければ位置情報は一切送信されません。</p>
+    <p class="en">If you open the "Dashboard" on the top page and grant browser location permission, your latitude/longitude is sent to the services behind the weather, rain-radar, and air-quality cards (Geospatial Information Authority of Japan's reverse geocoder, Open-Meteo, Weathernews, and Windy's rain radar embed). Nothing is sent unless you grant permission.</p>
+  </section>
+
+  <section class="section">
+    <h2>5. アクセス解析・広告 <span class="en">Analytics &amp; advertising</span></h2>
+    <p class="jp">本サイトは、第三者によるアクセス解析タグ・広告トラッキングを設置していません（本ページ更新時点）。</p>
+    <p class="en">This site does not embed any third-party analytics or ad-tracking tags (as of this page's last update).</p>
+  </section>
+
+  <section class="section">
+    <h2>6. お問い合わせ <span class="en">Contact</span></h2>
+    <p class="jp">本ポリシーに関するご質問は、<a class="inline-link" href="https://github.com/hifukasawa77-lgtm/main" target="_blank" rel="noopener noreferrer">GitHubリポジトリ</a>のIssue等からご連絡ください。</p>
+    <p class="en">If you have questions about this policy, please reach out via an Issue on the <a class="inline-link" href="https://github.com/hifukasawa77-lgtm/main" target="_blank" rel="noopener noreferrer">GitHub repository</a>.</p>
+  </section>
+
+</main>
+
+<footer>© 2025 hide — All rights reserved.</footer>
+
+</body>
+</html>

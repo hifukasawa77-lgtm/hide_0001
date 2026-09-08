@@ -16,6 +16,11 @@ notes = {}  # basename(拡張子なし) -> path
 for p in glob.glob(f'{VAULT}/**/*.md', recursive=True):
     notes[os.path.splitext(os.path.basename(p))[0]] = p
 
+# 00-Inbox/はじめに.md はスマホ連携の常設ガイド（投げ込み場所の説明）で、
+# 仕分け対象でも孤立ノートでもない。除外しないと恒久的に✗が出続け、
+# 「いつも赤い検査」として本物の滞留が見過ごされる。
+PERMANENT = {f'{VAULT}/00-Inbox/はじめに.md'}
+
 fail = False
 print('== 1. wikilink切れ ==')
 broken = []
@@ -41,6 +46,8 @@ for name, p in sorted(notes.items()):
         continue
     if '/01-Daily/' in p:  # Dailyは日付で辿れるため対象外
         continue
+    if p in PERMANENT:
+        continue
     if name not in links_to:
         orphans.append(f'  ✗ {p}（MOCまたは親ノートからリンクを張る）')
 if orphans:
@@ -49,7 +56,7 @@ else:
     print('  ✓ 孤立なし')
 
 print('== 3. Inbox滞留 ==')
-inbox = sorted(glob.glob(f'{VAULT}/00-Inbox/*.md'))
+inbox = [p for p in sorted(glob.glob(f'{VAULT}/00-Inbox/*.md')) if p not in PERMANENT]
 if inbox:
     for p in inbox:
         print(f'  ✗ {p}（SKILL.mdの仕分け基準で移動）')

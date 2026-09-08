@@ -541,6 +541,8 @@ Claude Code Remote の Routine で自動起動されるスキル。**Routineを�
 - `obsidian-vault/` をClaude Codeの永続メモリとして運用する（Obsidian互換のMarkdown Vault）
 - セッション開始時に `.claude/hooks/second-brain-recall.sh`（SessionStart hook）が `MOC.md`・知見クイックインデックス（`04-Knowledge/`）・直近のDaily Noteを自動でコンテキストに読み込む
 - 重要な意思決定・学び・「メモして」等の指示があった場合は `obsidian-vault/` へ追記する。書き込みルールの詳細は `.claude/skills/second-brain/SKILL.md` を参照
+- **スマホ（Android）のObsidianと同じVaultを共有する**（Obsidian Gitでこのリポジトリを同期。手順: `docs/obsidian-スマホ連携.md`）。深澤がスマホで書いたメモは `00-Inbox/` に落ち、recall hook が**全文**コンテキストへ入れる。**読んだら行き先（`03-Decisions`/`04-Knowledge`/`02-Projects`/`01-Daily`）へ振り分けて `00-Inbox/` から消すこと**——溜めると毎セッション読み直して文脈を食う。行き先が決まらないものは消さずに深澤へ確認する
+- **このリポジトリは公開**。Vaultに機微情報（鍵・パスワード・他人の個人情報）を書かない。スマホから書くと無自覚に混入しやすいので、見つけたら深澤へ即報告する
 - **再帰的自己改善ループ**: 蓄積（`/second-brain`）→ 想起（recall hook）→ 反映（`/self-improve`）の閉ループで運用する。セッションの区切りや同種のミス再発時は `/self-improve` で、Vaultの学びを最も狭く効く宛先（該当エージェント定義 / CLAUDE.md / スキル / フック）へ昇格させる。詳細は `.claude/skills/self-improve/SKILL.md`
 - PMOの `pmo/`（Google Drive、ステークホルダー向け進捗管理）とは役割が異なる。本Vaultは個人の知的資産（意思決定の理由・学び）を蓄積する
 - `claudechord-vault/`（後述）とは役割が異なる二重の「Obsidian メモリ層」。書き込み先に迷ったら後述の使い分け早見表を参照

@@ -56,3 +56,10 @@ tmp/synth-eq-verify.png
 
 # note: 貼り付け用の書き出し（note/articles/ が正本）
 note/export/
+
+# Obsidian（スマホ連携）: 端末ごとに変わる/衝突するだけのファイルは同期しない
+obsidian-vault/.obsidian/workspace.json
+obsidian-vault/.obsidian/workspace-mobile.json
+obsidian-vault/.obsidian/cache
+obsidian-vault/.trash/
+.DS_Store

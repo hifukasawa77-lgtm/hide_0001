@@ -71,6 +71,26 @@ export function auditCsp(csp) {
   return Object.assign(problems, { warnings });
 }
 
+/** 押して回るページ。多くのAPIを叩くものだけ（全ページでやると時間がかかりすぎる） */
+const INTERACT = ["index.html", "dashboard.html"];
+
+/**
+ * 画面のボタン・タブを順に押して、押して初めて走る通信を起こす。
+ * ★**押した先で画面が変わっても構わない**。ここで見たいのは CSP 違反だけ。
+ *   ただし別のページへ飛んでしまうと以降が測れないので、リンクは押さない。
+ */
+async function clickAround(page) {
+  const targets = await page.$$("button:visible, [role=tab]:visible, .tab:visible");
+  for (const target of targets.slice(0, 24)) {
+    try {
+      await target.click({ timeout: 1200, noWaitAfter: true });
+      await page.waitForTimeout(260);
+    } catch { /* 押せないものは飛ばす */ }
+  }
+  // 通信が返ってくるのを待つ
+  await page.waitForTimeout(2500);
+}
+
 function serve() {
   return new Promise((resolve) => {
     const server = createServer((request, response) => {
@@ -131,6 +151,11 @@ async function main() {
     try {
       await page.goto(`http://127.0.0.1:${PORT}/${name}`, { waitUntil: "load", timeout: 20_000 });
       await page.waitForTimeout(1200);
+      // ★開いただけでは、**押して初めて走る通信**を試せていない。
+      //   index / dashboard は数十のAPIを叩くので、押して回らないと
+      //   connect-src の穴が見つからない（見つからないまま公開すると、
+      //   その機能だけが無言で欠ける）。
+      if (INTERACT.includes(name)) await clickAround(page);
       const blocked = await page.evaluate(() => window.__CSP_VIOLATIONS ?? []);
       // ★訪問者の localhost 宛てが塞がれるのは**意図どおり**。公開ページが
       //   訪問者のPCの口を叩くのは正しくない（ZERO-1の音声中継が 3001 で待っている）。

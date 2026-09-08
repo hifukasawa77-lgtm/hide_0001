@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <!-- CSP: 完全クライアントサイド。外部通信なし。映像はカメラから取得しCanvas内で処理するのみ。 -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; base-uri 'self'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; base-uri 'self'; form-action 'self'; object-src 'none'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="description" content="カメラ映像の明るさをヒートマップ色に変換して疑似的な熱源探知を演出。Iron/Rainbow/White-Hotパレット、熱源マーカー、感度調整、PNG保存に対応。完全ブラウザ内処理・映像は外部送信なし。実際の温度は計測しません。">

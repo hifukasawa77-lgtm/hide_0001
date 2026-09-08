@@ -6,7 +6,7 @@
     CSP: jsQR はローカル（同一オリジン）に vendor 済みのため外部CDN不要。外部通信は一切なし。
     映像はカメラから取得し Canvas 内でデコードするのみ（外部送信なし）。
   -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; base-uri 'self'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; base-uri 'self'; form-action 'self'; object-src 'none'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="description" content="カメラでQRコードをその場でスキャン・デコード。URLはワンタップで開ける。完全ブラウザ内処理・映像は外部送信なし。Scan QR codes with your camera, fully on-device.">

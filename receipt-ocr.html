@@ -10,7 +10,7 @@
     - img-src/media-src blob: : プレビュー画像 / ライブカメラ映像。
     画像は外部送信しない（OCR は端末内で完結）。CDN からはライブラリ資産のみ取得する。
   -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://cdn.jsdelivr.net https://unpkg.com https://tessdata.projectnaptha.com data: blob:; worker-src 'self' blob:; child-src 'self' blob:; font-src 'self'; base-uri 'self'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://cdn.jsdelivr.net https://unpkg.com https://tessdata.projectnaptha.com data: blob:; worker-src 'self' blob:; child-src 'self' blob:; font-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="description" content="レシートをカメラで撮るだけで文字認識（OCR）し、品目・カテゴリー・個数・値段を自動抽出してCSV書き出し。完全ブラウザ内処理・画像は外部送信なし。Snap a receipt, OCR on-device, export CSV.">

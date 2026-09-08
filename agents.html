@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'">
   <!-- クリックジャッキング対策: X-Frame-Options は meta では無視される（HTTPヘッダ専用）ため、
        GitHub Pages ではJSフレームバスターで代替する。CSPの frame-ancestors も meta では無効。
        ※JS無効環境で白紙化しないよう、コンテンツを隠す方式（html{display:none}）は採らない -->

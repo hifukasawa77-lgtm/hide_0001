@@ -7,7 +7,7 @@
     映像は getUserMedia でカメラから取得し、Canvas 内で処理・保存するのみ（外部送信なし）。
     消しゴムマジックは Blob 生成の Web Worker 上で計算する（worker-src blob: を許可。データは端末内で完結し外部送信は発生しない）。
   -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; worker-src blob:; base-uri 'self'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; worker-src blob:; base-uri 'self'; form-action 'self'; object-src 'none'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="description" content="カメラや手持ちの写真をブラウザ内で編集できるフォトブース。消しゴムマジック（写り込んだ不要物をブラシで消すコンテンツ認識塗りつぶし）・明るさ/色調整・落書き/テキスト/スタンプ・セルフタイマー/連写ストリップ・リアルタイムフィルター。完全ブラウザ内処理・画像は外部送信なし。On-device magic eraser & photo editor.">

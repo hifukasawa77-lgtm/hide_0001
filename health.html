@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <!-- CSP: 完全クライアントサイド。外部通信なし。センサー(加速度/GPS)はブラウザ内で処理し外部送信しない。 -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; base-uri 'self'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; base-uri 'self'; form-action 'self'; object-src 'none'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="description" content="加速度センサーとGPSで歩数・距離・ペース・消費カロリー・ルートを計測するウォーク&ランのトラッカー。完全ブラウザ内処理・位置情報は外部送信なし。医療機器ではありません。Track steps, distance, pace and route with your phone's motion sensor & GPS — on-device, nothing leaves your phone.">

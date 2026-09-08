@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; frame-src 'none';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https: https://thingproxy.freeboard.io https://api.allorigins.win; frame-src 'none'; base-uri 'self'; form-action 'self'; object-src 'none'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ダッシュボード | hide の部屋</title>
   <style>
@@ -716,6 +716,11 @@ async function initVisit(){
   const el = document.getElementById('visit-body');
   el.innerHTML = `<div class="loading">${t('loading')}</div>`;
   try {
+    // ★公開サイトから訪問者の localhost を叩かない。これは手元の集計サーバ用で、
+    //   公開ページで走らせても必ず失敗する（5秒待たされるだけ）うえ、
+    //   訪問者のPCで別のアプリが3001番を使っていればそこへ要求が飛ぶ。
+    //   実際 ZERO-1（PC版）の音声中継が 127.0.0.1:3001 で待っている。
+    if (!/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) throw new Error('local-only');
     const res = await fetchWithTimeout('http://localhost:3001/api/access/hit', { method: 'POST' }, 5000);
     if(res.ok){
       const d = await res.json();
